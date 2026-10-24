@@ -1,0 +1,146 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": false,
+    "root": "."
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  },
+  "files": {
+    "ignoreUnknown": true,
+    "includes": [
+      "**/*",
+      "!*/docs",
+      "!*/public/static",
+      "!*/dist",
+      "!*/out",
+      "!*/coverage",
+      "!*/node_modules",
+      "!*/.next",
+      "!*/.qoder/**/*",
+      "!*/.zed/**/*",
+      "!*/.agents/**/*",
+      "!*/.tmp/**/*"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "formatWithErrors": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100,
+    "attributePosition": "auto",
+    "bracketSpacing": true,
+    "trailingNewline": true
+  },
+  "javascript": {
+    "formatter": {
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "jsxQuoteStyle": "double",
+      "quoteProperties": "asNeeded",
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all"
+    }
+  },
+  "json": {
+    "formatter": {
+      "trailingCommas": "none",
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "expand": "auto",
+      "bracketSpacing": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": {
+        "useKeyWithClickEvents": "off",
+        "noStaticElementInteractions": "off",
+        "useButtonType": "error",
+        "useAltText": "error",
+        "useHtmlLang": "warn",
+        "useValidLang": "warn",
+        "noRedundantAlt": "error",
+        "noPositiveTabindex": "error",
+        "noSvgWithoutTitle": "off",
+        "useValidAnchor": "off"
+      },
+      "complexity": {
+        "noForEach": "off",
+        "noImportantStyles": "off",
+        "noBannedTypes": "error",
+        "noUselessConstructor": "error"
+      },
+      "correctness": {
+        "noUnusedVariables": "warn",
+        "useExhaustiveDependencies": "warn",
+        "noUnusedImports": "error",
+        "noUndeclaredDependencies": "error"
+      },
+      "performance": {
+        "noAccumulatingSpread": "warn"
+      },
+      "security": {
+        "noDangerouslySetInnerHtml": "warn"
+      },
+      "style": {
+        "noParameterAssign": "warn",
+        "useDefaultParameterLast": "warn",
+        "useLiteralEnumMembers": "warn",
+        "noNonNullAssertion": "warn",
+        "noDescendingSpecificity": "warn",
+        "useAsConstAssertion": "error",
+        "useEnumInitializers": "error",
+        "useSelfClosingElements": "error",
+        "useSingleVarDeclarator": "error",
+        "noUnusedTemplateLiteral": "off",
+        "useNumberNamespace": "error",
+        "noInferrableTypes": "error",
+        "noUselessElse": "error",
+        "useObjectSpread": "warn",
+        "useConst": "error",
+        "useTemplate": "warn"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off",
+        "noAssignInExpressions": "off",
+        "noDoubleEquals": "off",
+        "noExplicitAny": "warn",
+        "noImplicitAnyLet": "off",
+        "noPrototypeBuiltins": "warn",
+        "useIterableCallbackReturn": "off",
+        "noShadowRestrictedNames": "warn"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.vue"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "noUnusedFunctionParameters": "off",
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
+        }
+      }
+    }
+  ]
+}
