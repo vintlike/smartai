@@ -1,0 +1,478 @@
+// 通用框架布局样式：只依赖 CSS 变量与 antd 组件类名，不包含业务样式
+
+@header-height: 56px;
+@control-gutter: 8px;
+@radius-sm: 4px;
+@radius-md: 8px;
+@radius-lg: 10px;
+@transition-fast: 0.15s ease;
+@transition-base: 0.2s ease;
+@mask-bg: rgba(128, 128, 128, 0.12);
+@mask-border: rgba(128, 128, 128, 0.25);
+
+.sa-layout {
+  min-height: 100vh;
+
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+}
+
+/* ---------- Logo ---------- */
+.sa-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: @header-height;
+  padding: 0 16px;
+  color: inherit;
+  text-decoration: none;
+  overflow: hidden;
+  white-space: nowrap;
+  flex: none;
+
+  &:hover {
+    color: inherit;
+  }
+
+  &__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    line-height: 0;
+
+    img {
+      border-radius: @radius-md;
+      object-fit: contain;
+    }
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+  }
+
+  &--header {
+    padding: 0 20px 0 8px;
+    height: 100%;
+  }
+}
+
+/* ---------- Sider ---------- */
+.sa-sider {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  z-index: 20;
+
+  &--under-header {
+    top: var(--sa-header-height, @header-height);
+    height: calc(100vh - var(--sa-header-height, @header-height));
+  }
+
+  &__inner {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  &__logo {
+    flex: none;
+  }
+
+  &__menu {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 4px 0 12px;
+
+    .sa-menu {
+      border-inline-end: none;
+    }
+  }
+}
+
+/* ---------- Header ---------- */
+.sa-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: none;
+  line-height: normal;
+
+  &--fixed {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: @control-gutter;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  &__menu {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+}
+
+.sa-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+
+  .sa-icon-btn {
+    color: inherit;
+  }
+
+  // 业务插槽（如账号菜单）与框架自带动作之间加分割线
+  &__extra {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-start: 4px;
+    padding-inline-start: 6px;
+    border-inline-start: 1px solid var(--sa-color-border-secondary, #f0f0f0);
+  }
+}
+
+.sa-icon-btn--settings {
+  svg {
+    transition: transform 0.3s ease;
+  }
+
+  &:hover svg {
+    transform: rotate(60deg);
+  }
+}
+
+.sa-breadcrumb {
+  margin-inline-start: 4px;
+  white-space: nowrap;
+
+  &__home {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+/* ---------- Tabs ---------- */
+.sa-tabsbar {
+  padding: 10px 16px 0;
+  flex: none;
+
+  .ant-tabs-nav {
+    margin-bottom: 0;
+  }
+
+  .ant-tabs-nav-list {
+    align-items: center;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-inline-start: @control-gutter;
+    padding-inline-start: @control-gutter;
+    border-inline-start: 1px solid var(--sa-color-border-secondary, #f0f0f0);
+  }
+
+  // 刷新与操作下拉之间的分隔线
+  &__divider {
+    flex: none;
+    width: 1px;
+    height: 12px;
+    margin: 0 2px;
+    background: var(--sa-color-border-secondary, #f0f0f0);
+  }
+}
+
+.sa-tab-label {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* ---------- Content ---------- */
+.sa-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 12px 16px 16px;
+
+  &__inner {
+    min-height: 100%;
+  }
+}
+
+.sa-page {
+  height: 100%;
+}
+
+/* ---------- Menu labels ---------- */
+.sa-menu-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+
+  &__external {
+    opacity: 0.45;
+  }
+}
+
+/* ---------- Loading / Result ---------- */
+.sa-page-loading {
+  min-height: 40vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sa-state-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.sa-result-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+
+  code {
+    margin-inline-start: 4px;
+    padding: 2px 6px;
+    border-radius: @radius-sm;
+    background: @mask-bg;
+    font-size: 12px;
+  }
+}
+
+/* ---------- 设置抽屉 ---------- */
+.sa-settings-drawer {
+  .sa-settings-section {
+    margin-bottom: 28px;
+
+    h4 {
+      margin: 0 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0.85;
+    }
+  }
+}
+
+.sa-mode-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: @control-gutter;
+}
+
+.sa-mode-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: @control-gutter;
+  padding: 8px 4px 10px;
+  border: 1px solid @mask-border;
+  border-radius: @radius-lg;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    border-color @transition-base,
+    box-shadow @transition-base,
+    color @transition-base;
+
+  &:hover {
+    border-color: var(--sa-color-primary);
+  }
+
+  &.is-active {
+    border-color: var(--sa-color-primary);
+    color: var(--sa-color-primary);
+    box-shadow: inset 0 0 0 1px var(--sa-color-primary);
+  }
+}
+
+.sa-mode-preview {
+  position: relative;
+  width: 66px;
+  height: 42px;
+  border-radius: 5px;
+  background: @mask-bg;
+  overflow: hidden;
+
+  &__side,
+  &__top {
+    position: absolute;
+    background: rgba(128, 128, 128, 0.38);
+  }
+
+  &__body {
+    position: absolute;
+    border-radius: 2px;
+    background: rgba(128, 128, 128, 0.22);
+  }
+}
+
+// vertical: 左侧菜单 + 顶部栏
+.sa-mode-preview--vertical {
+  .sa-mode-preview__side {
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 16px;
+  }
+
+  .sa-mode-preview__top {
+    left: 16px;
+    right: 0;
+    top: 0;
+    height: 9px;
+  }
+
+  .sa-mode-preview__body {
+    left: 20px;
+    right: 4px;
+    top: 13px;
+    bottom: 4px;
+  }
+}
+
+// horizontal: 仅顶部栏
+.sa-mode-preview--horizontal {
+  .sa-mode-preview__side {
+    display: none;
+  }
+
+  .sa-mode-preview__top {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 12px;
+  }
+
+  .sa-mode-preview__body {
+    left: 4px;
+    right: 4px;
+    top: 16px;
+    bottom: 4px;
+  }
+}
+
+// blend: 顶部一级菜单 + 左侧二级菜单
+.sa-mode-preview--blend {
+  .sa-mode-preview__top {
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 11px;
+  }
+
+  .sa-mode-preview__side {
+    left: 0;
+    top: 11px;
+    bottom: 0;
+    width: 13px;
+  }
+
+  .sa-mode-preview__body {
+    left: 17px;
+    right: 4px;
+    top: 15px;
+    bottom: 4px;
+  }
+}
+
+.sa-color-list {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: @control-gutter;
+}
+
+.sa-color-item {
+  aspect-ratio: 1 / 1;
+  width: 100%;
+  border: none;
+  border-radius: @radius-md;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: box-shadow @transition-fast;
+
+  // 悬停只在内侧画高光，不改尺寸；选中外圈描边使用当前主题色
+  &:hover:not(:disabled) {
+    box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  &.is-active,
+  &.is-active:hover:not(:disabled) {
+    box-shadow: 0 0 0 2px var(--sa-color-primary);
+  }
+}
+
+.sa-color-custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.sa-settings-tip {
+  margin: 8px 0 0;
+  font-size: 12px;
+  opacity: 0.55;
+}
+
+.sa-switch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 0;
+  font-size: 13px;
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 768px) {
+  .sa-header {
+    padding-inline: 8px;
+  }
+
+  .sa-breadcrumb {
+    display: none;
+  }
+
+  .sa-content {
+    padding: 10px;
+  }
+}

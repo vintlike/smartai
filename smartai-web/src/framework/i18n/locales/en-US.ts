@@ -39,9 +39,13 @@ const enUS: I18nMessages = {
       dark: 'Dark',
     },
     tabs: {
+      refresh: 'Refresh',
       close: 'Close Tab',
       closeOthers: 'Close Other Tabs',
+      closeLeft: 'Close Tabs to the Left',
+      closeRight: 'Close Tabs to the Right',
       closeAll: 'Close All Tabs',
+      more: 'Tab Actions',
     },
     menu: {
       loading: 'Loading menu…',

@@ -77,11 +77,15 @@ export type {
 
 // ---------- layout ----------
 export { BasicLayout } from './layout/BasicLayout'
+export type { BasicLayoutProps } from './layout/BasicLayout'
 export { LayoutProvider, useLayout } from './layout/LayoutProvider'
 export type { LayoutContextValue, LayoutProviderProps, TabItem } from './layout/LayoutProvider'
 export { AppLogo } from './layout/components/AppLogo'
 export { BrandMark } from './layout/components/BrandMark'
+export { HeaderActions } from './layout/components/HeaderActions'
+export type { HeaderActionsProps } from './layout/components/HeaderActions'
 export { LayoutHeader } from './layout/components/LayoutHeader'
+export type { LayoutHeaderProps } from './layout/components/LayoutHeader'
 export { MenuErrorScreen, MenuLoadingScreen } from './layout/components/MenuStateScreen'
 export { PageLoading } from './layout/components/PageLoading'
 export { MissingPage, NotFoundPage } from './layout/components/ResultPages'

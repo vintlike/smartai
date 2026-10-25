@@ -39,9 +39,13 @@ const zhCN: I18nMessages = {
       dark: '暗黑模式',
     },
     tabs: {
+      refresh: '刷新',
       close: '关闭标签页',
       closeOthers: '关闭其它标签页',
+      closeLeft: '关闭左侧标签页',
+      closeRight: '关闭右侧标签页',
       closeAll: '关闭全部标签页',
+      more: '标签页操作',
     },
     menu: {
       loading: '正在加载菜单…',

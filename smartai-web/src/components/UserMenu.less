@@ -1,0 +1,115 @@
+// 顶栏账号菜单样式：只作用于 UserMenu 组件，尺寸与顶栏图标按钮对齐
+
+@avatar-gap: 8px;
+@panel-radius: 8px;
+@divider-color: var(--sa-color-border-secondary, #f0f0f0);
+@hover-bg: rgba(128, 128, 128, 0.12);
+@panel-bg: var(--sa-color-bg-elevated, #fff);
+@panel-shadow:
+  0 6px 16px rgba(0, 0, 0, 0.08),
+  0 3px 6px -4px rgba(0, 0, 0, 0.12),
+  0 9px 28px 8px rgba(0, 0, 0, 0.05);
+
+.sa-user-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: @avatar-gap;
+  height: 36px;
+  padding: 0 6px;
+  border: none;
+  border-radius: 18px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: @hover-bg;
+  }
+
+  &__name {
+    max-width: 96px;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sa-user-panel {
+  min-width: 208px;
+  border-radius: @panel-radius;
+  background: @panel-bg;
+  box-shadow: @panel-shadow;
+  overflow: hidden;
+
+  // 弹层背景统一由 panel 提供，内部菜单不再自带底色与阴影，避免嵌套出现暗边
+  .ant-dropdown-menu {
+    padding: 4px;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  &__header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    padding: 6px 12px 10px;
+    border-bottom: 1px solid @divider-color;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  &__name {
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  &__desc {
+    overflow: hidden;
+    font-size: 12px;
+    opacity: 0.55;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.sa-user-profile {
+  &__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid @divider-color;
+  }
+
+  &__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__name {
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  &__desc {
+    font-size: 12px;
+    opacity: 0.55;
+  }
+}
+
+// 窄屏只保留头像，避免顶栏拥挤
+@media (max-width: 768px) {
+  .sa-user-trigger__name {
+    display: none;
+  }
+}

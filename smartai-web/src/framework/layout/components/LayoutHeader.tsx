@@ -1,5 +1,6 @@
 import { Button, Layout, theme, Tooltip } from 'antd'
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { AppLogo } from './AppLogo'
 import { HeaderActions } from './HeaderActions'
@@ -9,8 +10,13 @@ import { useLayout } from '../LayoutProvider'
 
 const { Header } = Layout
 
+export interface LayoutHeaderProps {
+  /** 顶栏右侧业务动作区，由接入方传入 */
+  actions?: ReactNode
+}
+
 /** 通用顶栏：根据菜单模式切换 logo / 横向菜单 / 面包屑 */
-export function LayoutHeader() {
+export function LayoutHeader({ actions }: LayoutHeaderProps) {
   const { settings, collapsed, toggleCollapsed } = useLayout()
   const { t } = useI18n()
   const { token } = theme.useToken()
@@ -49,7 +55,7 @@ export function LayoutHeader() {
         {isBlend ? <TopMenu className="sa-header__menu" highlight="top" /> : null}
       </div>
 
-      <HeaderActions />
+      <HeaderActions>{actions}</HeaderActions>
     </Header>
   )
 }

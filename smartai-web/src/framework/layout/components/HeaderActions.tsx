@@ -1,11 +1,17 @@
 import { Button, Dropdown, Tooltip } from 'antd'
 import { Check, Languages, Moon, Settings, Sun } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useI18n } from '../../i18n/I18nProvider'
 import { useTheme } from '../../theme/ThemeProvider'
 import { useLayout } from '../LayoutProvider'
 
-/** 顶栏右侧动作区：语言、主题、界面设置 */
-export function HeaderActions() {
+export interface HeaderActionsProps {
+  /** 业务侧插入的动作（如用户菜单），渲染在最右侧 */
+  children?: ReactNode
+}
+
+/** 顶栏右侧动作区：语言、主题、界面设置，末尾预留业务插槽 */
+export function HeaderActions({ children }: HeaderActionsProps) {
   const { t, locale, setLocale, locales } = useI18n()
   const { mode, toggleMode } = useTheme()
   const { openSettings } = useLayout()
@@ -59,6 +65,8 @@ export function HeaderActions() {
           icon={<Settings size={18} />}
         />
       </Tooltip>
+
+      {children ? <div className="sa-header-actions__extra">{children}</div> : null}
     </div>
   )
 }

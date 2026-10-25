@@ -47,6 +47,13 @@ export interface LayoutContextValue {
   closeTab: (key: string) => void
   closeOtherTabs: (key: string) => void
   closeAllTabs: () => void
+  /** 关闭指定 Tab 左侧的可关闭 Tab */
+  closeLeftTabs: (key: string) => void
+  /** 关闭指定 Tab 右侧的可关闭 Tab */
+  closeRightTabs: (key: string) => void
+  /** 刷新指定 Tab（缺省为当前页），通过变更 refreshToken 重挂载页面 */
+  refreshTab: (key?: string) => void
+  refreshToken: number
 }
 
 const LayoutContext = createContext<LayoutContextValue | null>(null)
@@ -67,6 +74,7 @@ export function LayoutProvider({
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [tabs, setTabs] = useState<TabItem[]>([])
   const [responsiveCollapsed, setResponsiveCollapsed] = useState(false)
+  const [refreshToken, setRefreshToken] = useState(0)
 
   const defaults = useMemo<LayoutSettings>(
     () => ({ ...defaultLayoutSettings, ...defaultSettings }),
@@ -125,6 +133,37 @@ export function LayoutProvider({
     navigate('/')
   }, [navigate])
 
+  const closeLeftTabs = useCallback(
+    (key: string) => {
+      const index = tabs.findIndex((tab) => tab.key === key)
+      if (index <= 0) return
+      const nextTabs = tabs.filter((tab, i) => i >= index || !tab.closable)
+      setTabs(nextTabs)
+      if (!nextTabs.some((tab) => tab.key === location.pathname)) navigate(key)
+    },
+    [tabs, location.pathname, navigate],
+  )
+
+  const closeRightTabs = useCallback(
+    (key: string) => {
+      const index = tabs.findIndex((tab) => tab.key === key)
+      if (index === -1) return
+      const nextTabs = tabs.filter((tab, i) => i <= index || !tab.closable)
+      setTabs(nextTabs)
+      if (!nextTabs.some((tab) => tab.key === location.pathname)) navigate(key)
+    },
+    [tabs, location.pathname, navigate],
+  )
+
+  const refreshTab = useCallback(
+    (key?: string) => {
+      const target = key ?? location.pathname
+      if (target !== location.pathname) navigate(target)
+      setRefreshToken((token) => token + 1)
+    },
+    [location.pathname, navigate],
+  )
+
   const collapsed = settings.collapsed || responsiveCollapsed
 
   const setCollapsed = useCallback(
@@ -160,6 +199,10 @@ export function LayoutProvider({
       closeTab,
       closeOtherTabs,
       closeAllTabs,
+      closeLeftTabs,
+      closeRightTabs,
+      refreshTab,
+      refreshToken,
     }),
     [
       settings,
@@ -177,6 +220,10 @@ export function LayoutProvider({
       closeTab,
       closeOtherTabs,
       closeAllTabs,
+      closeLeftTabs,
+      closeRightTabs,
+      refreshTab,
+      refreshToken,
     ],
   )
 

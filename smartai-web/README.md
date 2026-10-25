@@ -128,7 +128,16 @@ src/
 
 左侧菜单模式支持顶栏按钮收起 / 展开，也支持设置抽屉中的开关；窄屏（< lg）自动收起。
 
-### 5. Provider API
+### 5. 多标签页操作
+
+开启「多标签页」后，每个标签支持右键菜单，标签栏右侧提供刷新按钮与操作下拉菜单，菜单项为：刷新、关闭、关闭其它、关闭左侧、关闭右侧。
+
+- 刷新通过 `refreshTab(key?)` 递增 `refreshToken` 重新挂载当前路由页面，不做整页刷新，Tab 状态不丢失；刷新非当前标签时会先跳转到该标签
+- `useLayout()` 暴露 `closeTab`、`closeOtherTabs`、`closeLeftTabs`、`closeRightTabs`、`closeAllTabs`、`refreshTab`
+- 关闭左侧 / 右侧只作用于可关闭标签，当前页被关闭时自动跳到操作目标标签
+- Tab 状态保存在当前会话内存中，刷新浏览器后重建
+
+### 6. Provider API
 
 ```tsx
 <BrowserRouter>
@@ -149,11 +158,11 @@ src/
 | `I18nProvider`    | 语言包合并、`t` / `has`、语言持久化                  |
 | `ThemeProvider`   | 亮暗主题、主题色、antd `ConfigProvider` 集成         |
 | `MenuProvider`    | 菜单请求、归一化、菜单链查询、路由高亮数据           |
-| `LayoutProvider`  | 菜单模式、收起状态、多 Tab、设置抽屉                 |
+| `LayoutProvider`  | 菜单模式、收起状态、多 Tab（含刷新）、设置抽屉       |
 
 对应的 hooks：`useI18n`、`useTheme`、`useMenu`、`useLayout`、`useMenuTitle`。
 
-### 6. 国际化
+### 7. 国际化
 
 ```tsx
 const { t, locale, setLocale } = useI18n()
@@ -169,7 +178,7 @@ const businessMessages = {
 }
 ```
 
-### 7. 持久化
+### 8. 持久化
 
 | key                        | 内容                       |
 | -------------------------- | -------------------------- |

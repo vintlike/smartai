@@ -1,5 +1,6 @@
 import { Layout, theme } from 'antd'
 import { Suspense, useEffect, useMemo } from 'react'
+import type { ReactNode } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import { defaultCollapsedWidth, defaultSiderWidth } from '../config/settings'
 import { useMenu } from '../menu/MenuProvider'
@@ -11,17 +12,22 @@ import { PageLoading } from './components/PageLoading'
 import { SettingsDrawer } from './components/SettingsDrawer'
 import { SideMenu } from './components/SideMenu'
 import { TabsBar } from './components/TabsBar'
-import '../styles/layout.css'
+import '../styles/layout.less'
 
 const { Content, Sider } = Layout
+
+export interface BasicLayoutProps {
+  /** 顶栏最右侧的业务动作插槽（如用户头像菜单），框架不关心其内容 */
+  headerActions?: ReactNode
+}
 
 /**
  * 通用后台布局，支持 vertical / horizontal / blend 三种菜单模式。
  * 布局内部不关心业务页面，只负责外壳、菜单与多 Tab。
  */
-export function BasicLayout() {
+export function BasicLayout({ headerActions }: BasicLayoutProps) {
   const { menuTree, getMenuChain } = useMenu()
-  const { settings, logo, addTab, collapsed, setResponsiveCollapsed } = useLayout()
+  const { settings, logo, addTab, collapsed, setResponsiveCollapsed, refreshToken } = useLayout()
   const getTitle = useMenuTitle()
   const location = useLocation()
   const { token } = theme.useToken()
@@ -75,7 +81,7 @@ export function BasicLayout() {
   const content = (
     <Content className="sa-content">
       <div className="sa-content__inner">
-        <Suspense fallback={<PageLoading />}>
+        <Suspense key={`${location.pathname}#${refreshToken}`} fallback={<PageLoading />}>
           <Outlet />
         </Suspense>
       </div>
@@ -88,14 +94,14 @@ export function BasicLayout() {
         <Layout className="sa-layout" hasSider>
           {sider}
           <Layout className="sa-layout__main">
-            <LayoutHeader />
+            <LayoutHeader actions={headerActions} />
             {tabs}
             {content}
           </Layout>
         </Layout>
       ) : (
         <Layout className="sa-layout">
-          <LayoutHeader />
+          <LayoutHeader actions={headerActions} />
           <Layout className="sa-layout__body" hasSider={showSider}>
             {sider}
             <Layout className="sa-layout__main">

@@ -1,5 +1,6 @@
 import { Suspense, useMemo } from 'react'
 import { Navigate, useRoutes } from 'react-router-dom'
+import { UserMenu } from '@/components/UserMenu'
 import {
   BasicLayout,
   MenuErrorScreen,
@@ -36,7 +37,7 @@ export function AppRouter() {
     return [
       {
         path: '/',
-        element: <BasicLayout />,
+        element: <BasicLayout headerActions={<UserMenu />} />,
         children: [
           {
             index: true,
