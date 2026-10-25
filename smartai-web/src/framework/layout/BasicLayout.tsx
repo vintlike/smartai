@@ -1,24 +1,24 @@
-import { Layout, theme } from 'antd'
-import { Suspense, useEffect, useMemo } from 'react'
-import type { ReactNode } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { defaultCollapsedWidth, defaultSiderWidth } from '../config/settings'
-import { useMenu } from '../menu/MenuProvider'
-import { useMenuTitle } from '../menu/useMenuTitle'
-import { useLayout } from './LayoutProvider'
-import { AppLogo } from './components/AppLogo'
-import { LayoutHeader } from './components/LayoutHeader'
-import { PageLoading } from './components/PageLoading'
-import { SettingsDrawer } from './components/SettingsDrawer'
-import { SideMenu } from './components/SideMenu'
-import { TabsBar } from './components/TabsBar'
-import '../styles/layout.less'
+import { Layout, theme } from 'antd';
+import type { ReactNode } from 'react';
+import { Suspense, useEffect, useMemo } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { defaultCollapsedWidth, defaultSiderWidth } from '../config/settings';
+import { useMenu } from '../menu/MenuProvider';
+import { useMenuTitle } from '../menu/useMenuTitle';
+import { AppLogo } from './components/AppLogo';
+import { LayoutHeader } from './components/LayoutHeader';
+import { PageLoading } from './components/PageLoading';
+import { SettingsDrawer } from './components/SettingsDrawer';
+import { SideMenu } from './components/SideMenu';
+import { TabsBar } from './components/TabsBar';
+import { useLayout } from './LayoutProvider';
+import '../styles/layout.less';
 
-const { Content, Sider } = Layout
+const { Content, Sider } = Layout;
 
 export interface BasicLayoutProps {
   /** 顶栏最右侧的业务动作插槽（如用户头像菜单），框架不关心其内容 */
-  headerActions?: ReactNode
+  headerActions?: ReactNode;
 }
 
 /**
@@ -26,27 +26,27 @@ export interface BasicLayoutProps {
  * 布局内部不关心业务页面，只负责外壳、菜单与多 Tab。
  */
 export function BasicLayout({ headerActions }: BasicLayoutProps) {
-  const { menuTree, getMenuChain } = useMenu()
-  const { settings, logo, addTab, collapsed, setResponsiveCollapsed, refreshToken } = useLayout()
-  const getTitle = useMenuTitle()
-  const location = useLocation()
-  const { token } = theme.useToken()
+  const { menuTree, getMenuChain } = useMenu();
+  const { settings, logo, addTab, collapsed, setResponsiveCollapsed, refreshToken } = useLayout();
+  const getTitle = useMenuTitle();
+  const location = useLocation();
+  const { token } = theme.useToken();
 
-  const chain = useMemo(() => getMenuChain(location.pathname), [getMenuChain, location.pathname])
-  const current = chain.length > 0 ? chain[chain.length - 1] : undefined
-  const currentTitle = current ? getTitle(current) : ''
+  const chain = useMemo(() => getMenuChain(location.pathname), [getMenuChain, location.pathname]);
+  const current = chain.length > 0 ? chain[chain.length - 1] : undefined;
+  const currentTitle = current ? getTitle(current) : '';
 
   useEffect(() => {
-    if (!current) return
-    addTab({ key: current.path, path: current.path, title: currentTitle, closable: true })
-    const appTitle = logo.title ?? ''
-    document.title = currentTitle ? `${currentTitle} - ${appTitle}` : appTitle
-  }, [current, currentTitle, addTab, logo.title])
+    if (!current) return;
+    addTab({ key: current.path, path: current.path, title: currentTitle, closable: true });
+    const appTitle = logo.title ?? '';
+    document.title = currentTitle ? `${currentTitle} - ${appTitle}` : appTitle;
+  }, [current, currentTitle, addTab, logo.title]);
 
-  const isVertical = settings.layoutMode === 'vertical'
-  const isBlend = settings.layoutMode === 'blend'
-  const blendNodes = isBlend && chain[0]?.children.length ? chain[0].children : []
-  const showSider = isVertical || blendNodes.length > 0
+  const isVertical = settings.layoutMode === 'vertical';
+  const isBlend = settings.layoutMode === 'blend';
+  const blendNodes = isBlend && chain[0]?.children.length ? chain[0].children : [];
+  const showSider = isVertical || blendNodes.length > 0;
 
   const sider = showSider ? (
     <Sider
@@ -74,9 +74,9 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
         </div>
       </div>
     </Sider>
-  ) : null
+  ) : null;
 
-  const tabs = settings.showTabs ? <TabsBar /> : null
+  const tabs = settings.showTabs ? <TabsBar /> : null;
 
   const content = (
     <Content className="sa-content">
@@ -86,7 +86,7 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
         </Suspense>
       </div>
     </Content>
-  )
+  );
 
   return (
     <>
@@ -113,5 +113,5 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
       )}
       <SettingsDrawer />
     </>
-  )
+  );
 }

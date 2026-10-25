@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function MenuPage() {
   return (
@@ -7,5 +7,5 @@ export default function MenuPage() {
       path="/upms/menu"
       description="业务示例：菜单维护与权限标识配置。"
     />
-  )
+  );
 }

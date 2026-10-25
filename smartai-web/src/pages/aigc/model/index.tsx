@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function ModelPage() {
   return (
@@ -7,5 +7,5 @@ export default function ModelPage() {
       path="/aigc/model"
       description="业务示例：模型接入、参数配置与配额管理。"
     />
-  )
+  );
 }

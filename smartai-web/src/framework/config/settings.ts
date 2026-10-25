@@ -1,18 +1,18 @@
-import { colorPrimary, defaultLayoutMode, defaultThemeMode } from './theme'
-import type { LayoutMode, ThemeMode } from './theme'
+import type { LayoutMode, ThemeMode } from './theme';
+import { colorPrimary, defaultLayoutMode, defaultThemeMode } from './theme';
 
 /** 布局设置：全部可持久化，全部与业务无关 */
 export interface LayoutSettings {
   /** 菜单模式 */
-  layoutMode: LayoutMode
+  layoutMode: LayoutMode;
   /** 左侧菜单是否收起 */
-  collapsed: boolean
+  collapsed: boolean;
   /** 是否显示多 Tab 标签页 */
-  showTabs: boolean
+  showTabs: boolean;
   /** 是否显示面包屑 */
-  showBreadcrumb: boolean
+  showBreadcrumb: boolean;
   /** 顶栏是否吸顶 */
-  fixedHeader: boolean
+  fixedHeader: boolean;
 }
 
 export const defaultLayoutSettings: LayoutSettings = {
@@ -21,19 +21,19 @@ export const defaultLayoutSettings: LayoutSettings = {
   showTabs: true,
   showBreadcrumb: true,
   fixedHeader: true,
-}
+};
 
 export interface ThemeSettings {
   /** 主题风格 */
-  mode: ThemeMode
+  mode: ThemeMode;
   /** 主题色 */
-  colorPrimary: string
+  colorPrimary: string;
 }
 
 export const defaultThemeSettings: ThemeSettings = {
   mode: defaultThemeMode,
   colorPrimary,
-}
+};
 
 /** 默认持久化 key，接入方可通过 Provider 的 storageKey 覆盖 */
 export const defaultStorageKeys = {
@@ -41,8 +41,8 @@ export const defaultStorageKeys = {
   layout: 'smartai:layout-settings',
   locale: 'smartai:locale',
   tabs: 'smartai:tabs',
-}
+};
 
-export const defaultSiderWidth = 224
-export const defaultCollapsedWidth = 64
-export const defaultHeaderHeight = 56
+export const defaultSiderWidth = 224;
+export const defaultCollapsedWidth = 64;
+export const defaultHeaderHeight = 56;

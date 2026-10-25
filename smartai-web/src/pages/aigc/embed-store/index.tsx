@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function EmbedStorePage() {
   return (
@@ -7,5 +7,5 @@ export default function EmbedStorePage() {
       path="/aigc/embed-store"
       description="业务示例：向量库与索引配置。"
     />
-  )
+  );
 }

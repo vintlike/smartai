@@ -1,16 +1,16 @@
-import { App, Avatar, Descriptions, Dropdown, Modal } from 'antd'
-import type { DescriptionsProps, MenuProps } from 'antd'
-import { LogOut, UserRound } from 'lucide-react'
-import { useState } from 'react'
-import { currentUser, logout } from '@/services/user'
-import './UserMenu.less'
+import type { DescriptionsProps, MenuProps } from 'antd';
+import { App, Avatar, Descriptions, Dropdown, Modal } from 'antd';
+import { LogOut, UserRound } from 'lucide-react';
+import { useState } from 'react';
+import { currentUser, logout } from '@/services/user';
+import './UserMenu.less';
 
 /** 账号菜单：顶栏头像 + 下拉，展示当前登录账号信息，提供个人信息与退出登录 */
 export function UserMenu() {
-  const { modal, message } = App.useApp()
-  const [profileOpen, setProfileOpen] = useState(false)
+  const { modal, message } = App.useApp();
+  const [profileOpen, setProfileOpen] = useState(false);
 
-  const initial = currentUser.nickname.slice(0, 1)
+  const initial = currentUser.nickname.slice(0, 1);
 
   const profileItems: DescriptionsProps['items'] = [
     { key: 'username', label: '登录账号', children: currentUser.username },
@@ -20,7 +20,7 @@ export function UserMenu() {
     { key: 'email', label: '邮箱', children: currentUser.email ?? '-' },
     { key: 'phone', label: '手机号', children: currentUser.phone ?? '-' },
     { key: 'lastLoginAt', label: '最近登录', children: currentUser.lastLoginAt ?? '-' },
-  ]
+  ];
 
   const handleLogout = () => {
     modal.confirm({
@@ -30,18 +30,18 @@ export function UserMenu() {
       okButtonProps: { danger: true },
       cancelText: '取消',
       onOk: async () => {
-        await logout()
+        await logout();
         // 真实项目在此跳转登录页，例如 navigate('/login', { replace: true })
-        message.success('已退出登录')
+        message.success('已退出登录');
       },
-    })
-  }
+    });
+  };
 
   const menuItems: MenuProps['items'] = [
     { key: 'profile', icon: <UserRound size={14} />, label: '个人信息' },
     { type: 'divider' },
     { key: 'logout', icon: <LogOut size={14} />, label: '退出登录', danger: true },
-  ]
+  ];
 
   return (
     <>
@@ -51,8 +51,8 @@ export function UserMenu() {
         menu={{
           items: menuItems,
           onClick: ({ key }) => {
-            if (key === 'profile') setProfileOpen(true)
-            if (key === 'logout') handleLogout()
+            if (key === 'profile') setProfileOpen(true);
+            if (key === 'logout') handleLogout();
           },
         }}
         popupRender={(menu) => (
@@ -115,5 +115,5 @@ export function UserMenu() {
         </div>
       </Modal>
     </>
-  )
+  );
 }

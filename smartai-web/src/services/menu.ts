@@ -1,10 +1,10 @@
-import type { MenuItem } from '@/framework'
-import mockMenus from './mock-menu'
+import type { MenuItem } from '@/framework';
+import mockMenus from './mock-menu';
 
-const MENU_API = import.meta.env.VITE_MENU_API as string | undefined
+const MENU_API = import.meta.env.VITE_MENU_API as string | undefined;
 
 function delay(ms: number) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
@@ -14,22 +14,22 @@ function delay(ms: number) {
  */
 export async function fetchMenuList(): Promise<MenuItem[]> {
   if (!MENU_API) {
-    await delay(300)
-    return mockMenus
+    await delay(300);
+    return mockMenus;
   }
 
   const response = await fetch(MENU_API, {
     credentials: 'include',
     headers: { Accept: 'application/json' },
-  })
+  });
   if (!response.ok) {
-    throw new Error(`菜单接口请求失败（${response.status}）`)
+    throw new Error(`菜单接口请求失败（${response.status}）`);
   }
 
-  const payload: unknown = await response.json()
-  const list = Array.isArray(payload) ? payload : (payload as { data?: unknown }).data
+  const payload: unknown = await response.json();
+  const list = Array.isArray(payload) ? payload : (payload as { data?: unknown }).data;
   if (!Array.isArray(list)) {
-    throw new Error('菜单接口返回格式不正确')
+    throw new Error('菜单接口返回格式不正确');
   }
-  return list as MenuItem[]
+  return list as MenuItem[];
 }

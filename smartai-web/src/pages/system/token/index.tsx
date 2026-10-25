@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function TokenPage() {
   return (
@@ -7,5 +7,5 @@ export default function TokenPage() {
       path="/system/token"
       description="业务示例：访问令牌与有效期管理。"
     />
-  )
+  );
 }

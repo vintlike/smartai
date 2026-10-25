@@ -1,9 +1,9 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.5.14/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
-    "useIgnoreFile": false,
+    "useIgnoreFile": true,
     "root": "."
   },
   "assist": {
@@ -18,17 +18,18 @@
     "ignoreUnknown": true,
     "includes": [
       "**/*",
-      "!*/docs",
-      "!*/public/static",
-      "!*/dist",
-      "!*/out",
-      "!*/coverage",
-      "!*/node_modules",
-      "!*/.next",
-      "!*/.qoder/**/*",
-      "!*/.zed/**/*",
-      "!*/.agents/**/*",
-      "!*/.tmp/**/*"
+      "!**/docs",
+      "!**/public/static",
+      "!**/dist",
+      "!**/out",
+      "!**/coverage",
+      "!**/node_modules",
+      "!**/.next",
+      "!**/.qoder/**/*",
+      "!**/.zed/**/*",
+      "!**/.agents/**/*",
+      "!**/.tmp/**/*",
+      "!**/.vite/**/*"
     ]
   },
   "formatter": {
@@ -67,8 +68,11 @@
   },
   "linter": {
     "enabled": true,
+    "domains": {
+      "react": "recommended"
+    },
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "a11y": {
         "useKeyWithClickEvents": "off",
         "noStaticElementInteractions": "off",
@@ -88,8 +92,8 @@
         "noUselessConstructor": "error"
       },
       "correctness": {
-        "noUnusedVariables": "warn",
-        "useExhaustiveDependencies": "warn",
+        "noUnusedVariables": "error",
+        "useExhaustiveDependencies": "error",
         "noUnusedImports": "error",
         "noUndeclaredDependencies": "error"
       },
@@ -131,9 +135,13 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.vue"],
+      "includes": ["src/**"],
       "linter": {
         "rules": {
+          "a11y": {
+            "useKeyWithClickEvents": "off",
+            "noStaticElementInteractions": "off"
+          },
           "correctness": {
             "noUnusedFunctionParameters": "off",
             "noUnusedVariables": "off",

@@ -1,11 +1,11 @@
-import { Button, Dropdown, Tabs, Tooltip } from 'antd'
-import type { MenuProps, TabsProps } from 'antd'
-import { ArrowLeftToLine, ArrowRightToLine, ChevronDown, RotateCw, X } from 'lucide-react'
-import { useNavigate } from 'react-router-dom'
-import { useI18n } from '../../i18n/I18nProvider'
-import { useMenu } from '../../menu/MenuProvider'
-import { useMenuTitle } from '../../menu/useMenuTitle'
-import { useLayout } from '../LayoutProvider'
+import type { MenuProps, TabsProps } from 'antd';
+import { Button, Dropdown, Tabs, Tooltip } from 'antd';
+import { ArrowLeftToLine, ArrowRightToLine, ChevronDown, RotateCw, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../../i18n/I18nProvider';
+import { useMenu } from '../../menu/MenuProvider';
+import { useMenuTitle } from '../../menu/useMenuTitle';
+import { useLayout } from '../LayoutProvider';
 
 /**
  * 多 Tab 标签页：
@@ -13,39 +13,32 @@ import { useLayout } from '../LayoutProvider'
  * - 右侧提供刷新按钮与操作下拉菜单
  */
 export function TabsBar() {
-  const {
-    tabs,
-    activeKey,
-    closeTab,
-    closeOtherTabs,
-    closeLeftTabs,
-    closeRightTabs,
-    refreshTab,
-  } = useLayout()
-  const { getMenuNode } = useMenu()
-  const getTitle = useMenuTitle()
-  const { t } = useI18n()
-  const navigate = useNavigate()
+  const { tabs, activeKey, closeTab, closeOtherTabs, closeLeftTabs, closeRightTabs, refreshTab } =
+    useLayout();
+  const { getMenuNode } = useMenu();
+  const getTitle = useMenuTitle();
+  const { t } = useI18n();
+  const navigate = useNavigate();
 
-  if (tabs.length === 0) return null
+  if (tabs.length === 0) return null;
 
   const handleMenuClick = (targetKey: string, key: string) => {
-    if (key === 'refresh') refreshTab(targetKey)
-    else if (key === 'close') closeTab(targetKey)
-    else if (key === 'closeOthers') closeOtherTabs(targetKey)
-    else if (key === 'closeLeft') closeLeftTabs(targetKey)
-    else if (key === 'closeRight') closeRightTabs(targetKey)
-  }
+    if (key === 'refresh') refreshTab(targetKey);
+    else if (key === 'close') closeTab(targetKey);
+    else if (key === 'closeOthers') closeOtherTabs(targetKey);
+    else if (key === 'closeLeft') closeLeftTabs(targetKey);
+    else if (key === 'closeRight') closeRightTabs(targetKey);
+  };
 
   const buildMenuItems = (targetKey: string): MenuProps['items'] => {
-    const targetIndex = tabs.findIndex((tab) => tab.key === targetKey)
-    const target = tabs[targetIndex]
-    const closeDisabled = !target || !target.closable || tabs.length <= 1
-    const hasOtherClosable = tabs.some((tab) => tab.key !== targetKey && tab.closable)
+    const targetIndex = tabs.findIndex((tab) => tab.key === targetKey);
+    const target = tabs[targetIndex];
+    const closeDisabled = !target?.closable || tabs.length <= 1;
+    const hasOtherClosable = tabs.some((tab) => tab.key !== targetKey && tab.closable);
     const hasLeftClosable =
-      targetIndex > 0 && tabs.slice(0, targetIndex).some((tab) => tab.closable)
+      targetIndex > 0 && tabs.slice(0, targetIndex).some((tab) => tab.closable);
     const hasRightClosable =
-      targetIndex !== -1 && tabs.slice(targetIndex + 1).some((tab) => tab.closable)
+      targetIndex !== -1 && tabs.slice(targetIndex + 1).some((tab) => tab.closable);
 
     return [
       { key: 'refresh', label: t('layout.tabs.refresh'), icon: <RotateCw size={14} /> },
@@ -74,11 +67,11 @@ export function TabsBar() {
         icon: <ArrowRightToLine size={14} />,
         disabled: !hasRightClosable,
       },
-    ]
-  }
+    ];
+  };
 
   const items: NonNullable<TabsProps['items']> = tabs.map((tab) => {
-    const node = getMenuNode(tab.path)
+    const node = getMenuNode(tab.path);
     return {
       key: tab.key,
       label: (
@@ -94,8 +87,8 @@ export function TabsBar() {
         </Dropdown>
       ),
       closable: tab.closable && tabs.length > 1,
-    }
-  })
+    };
+  });
 
   const actions = (
     <div className="sa-tabsbar__actions">
@@ -127,7 +120,7 @@ export function TabsBar() {
         />
       </Dropdown>
     </div>
-  )
+  );
 
   return (
     <div className="sa-tabsbar">
@@ -139,10 +132,10 @@ export function TabsBar() {
         items={items}
         onChange={(key) => navigate(key)}
         onEdit={(targetKey, action) => {
-          if (action === 'remove') closeTab(String(targetKey))
+          if (action === 'remove') closeTab(String(targetKey));
         }}
         tabBarExtraContent={actions}
       />
     </div>
-  )
+  );
 }

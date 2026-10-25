@@ -1,12 +1,12 @@
-import { Button, Result } from 'antd'
-import { useNavigate } from 'react-router-dom'
-import { useI18n } from '../../i18n/I18nProvider'
-import { useMenu } from '../../menu/MenuProvider'
+import { Button, Result } from 'antd';
+import { useNavigate } from 'react-router-dom';
+import { useI18n } from '../../i18n/I18nProvider';
+import { useMenu } from '../../menu/MenuProvider';
 
 export function NotFoundPage() {
-  const { t } = useI18n()
-  const { firstMenuPath } = useMenu()
-  const navigate = useNavigate()
+  const { t } = useI18n();
+  const { firstMenuPath } = useMenu();
+  const navigate = useNavigate();
 
   return (
     <div className="sa-result-page">
@@ -21,12 +21,12 @@ export function NotFoundPage() {
         }
       />
     </div>
-  )
+  );
 }
 
 export function MissingPage({ component }: { component: string }) {
-  const { t } = useI18n()
-  const navigate = useNavigate()
+  const { t } = useI18n();
+  const navigate = useNavigate();
 
   return (
     <div className="sa-result-page">
@@ -46,5 +46,5 @@ export function MissingPage({ component }: { component: string }) {
         }
       />
     </div>
-  )
+  );
 }

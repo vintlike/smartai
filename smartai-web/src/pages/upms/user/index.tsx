@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function UserPage() {
   return (
@@ -7,5 +7,5 @@ export default function UserPage() {
       path="/upms/user"
       description="业务示例：用户列表与账号状态管理。"
     />
-  )
+  );
 }

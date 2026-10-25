@@ -1,19 +1,19 @@
-import type { ReactNode } from 'react'
+import type { ReactNode } from 'react';
 
 /** Logo 配置：图片/自定义节点、标题、跳转地址均可配置 */
 export interface LogoConfig {
   /** 图片地址，默认使用 public/logo.svg */
-  src?: string
+  src?: string;
   /** 自定义图标节点，优先级高于 src */
-  icon?: ReactNode
+  icon?: ReactNode;
   /** 标题 */
-  title?: string
+  title?: string;
   /** 是否显示标题 */
-  showTitle?: boolean
+  showTitle?: boolean;
   /** 菜单收起时是否仍然显示标题 */
-  showTitleWhenCollapsed?: boolean
+  showTitleWhenCollapsed?: boolean;
   /** 点击 Logo 跳转地址 */
-  href?: string
+  href?: string;
 }
 
 export const defaultLogoConfig: LogoConfig = {
@@ -22,4 +22,4 @@ export const defaultLogoConfig: LogoConfig = {
   showTitle: true,
   showTitleWhenCollapsed: false,
   href: '/',
-}
+};

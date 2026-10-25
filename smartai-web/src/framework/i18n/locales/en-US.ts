@@ -1,4 +1,4 @@
-import type { I18nMessages } from '../types'
+import type { I18nMessages } from '../types';
 
 const enUS: I18nMessages = {
   common: {
@@ -62,6 +62,6 @@ const enUS: I18nMessages = {
       description: 'No page file under src/pages matches the menu component:',
     },
   },
-}
+};
 
-export default enUS
+export default enUS;

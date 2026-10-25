@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function DeptPage() {
   return (
@@ -7,5 +7,5 @@ export default function DeptPage() {
       path="/upms/dept"
       description="业务示例：组织架构与部门维护。"
     />
-  )
+  );
 }

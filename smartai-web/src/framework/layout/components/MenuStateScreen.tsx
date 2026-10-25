@@ -1,18 +1,18 @@
-import { Button, Result, Spin } from 'antd'
-import { useI18n } from '../../i18n/I18nProvider'
+import { Button, Result, Spin } from 'antd';
+import { useI18n } from '../../i18n/I18nProvider';
 
 export function MenuLoadingScreen() {
-  const { t } = useI18n()
+  const { t } = useI18n();
   return (
     <div className="sa-state-screen">
       <Spin size="large" />
       <p>{t('layout.menu.loading')}</p>
     </div>
-  )
+  );
 }
 
 export function MenuErrorScreen({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
-  const { t } = useI18n()
+  const { t } = useI18n();
   return (
     <div className="sa-state-screen">
       <Result
@@ -26,5 +26,5 @@ export function MenuErrorScreen({ error, onRetry }: { error: Error | null; onRet
         }
       />
     </div>
-  )
+  );
 }

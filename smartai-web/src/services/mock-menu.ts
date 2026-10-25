@@ -1,4 +1,4 @@
-import type { MenuItem } from '@/framework'
+import type { MenuItem } from '@/framework';
 
 /** 菜单接口返回示例（与后端返回结构保持一致） */
 const mockMenus: MenuItem[] = [
@@ -280,6 +280,6 @@ const mockMenus: MenuItem[] = [
       },
     ],
   },
-]
+];
 
-export default mockMenus
+export default mockMenus;

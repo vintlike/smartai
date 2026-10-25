@@ -1,33 +1,34 @@
-import { Button, ColorPicker, Drawer, Segmented, Switch, Tooltip } from 'antd'
-import { Check, RefreshCw } from 'lucide-react'
-import { layoutModes, themeColors, themeModes } from '../../config/theme'
-import type { LayoutMode, ThemeMode } from '../../config/theme'
-import { useI18n } from '../../i18n/I18nProvider'
-import { useTheme } from '../../theme/ThemeProvider'
-import { useLayout } from '../LayoutProvider'
+import { Button, ColorPicker, Drawer, Segmented, Switch, Tooltip } from 'antd';
+import { Check, RefreshCw } from 'lucide-react';
+import type { LayoutMode, ThemeMode } from '../../config/theme';
+import { layoutModes, themeColors, themeModes } from '../../config/theme';
+import { useI18n } from '../../i18n/I18nProvider';
+import { useTheme } from '../../theme/ThemeProvider';
+import { useLayout } from '../LayoutProvider';
 
 /** 可选主题色：隐藏配置中标记为 disabled 的色板 */
-const availableThemeColors = themeColors.filter((item) => !item.disabled)
+const availableThemeColors = themeColors.filter((item) => !item.disabled);
 
 /** 界面设置抽屉：主题、菜单模式、主题色、多标签页、语言 */
 export function SettingsDrawer() {
-  const { t, has, locale, setLocale, locales } = useI18n()
+  const { t, has, locale, setLocale, locales } = useI18n();
+  const { mode, colorPrimary, setMode, setColorPrimary, reset: resetTheme } = useTheme();
   const {
-    mode,
-    colorPrimary,
-    setMode,
-    setColorPrimary,
-    reset: resetTheme,
-  } = useTheme()
-  const { settings, collapsed, setCollapsed, updateSettings, resetSettings, settingsOpen, closeSettings } =
-    useLayout()
+    settings,
+    collapsed,
+    setCollapsed,
+    updateSettings,
+    resetSettings,
+    settingsOpen,
+    closeSettings,
+  } = useLayout();
 
-  const modeLabel = (key: string, fallback: string) => (has(key) ? t(key) : fallback)
+  const modeLabel = (key: string, fallback: string) => (has(key) ? t(key) : fallback);
 
   const handleReset = () => {
-    resetSettings()
-    resetTheme()
-  }
+    resetSettings();
+    resetTheme();
+  };
 
   return (
     <Drawer
@@ -62,10 +63,7 @@ export function SettingsDrawer() {
             <button
               key={item.value}
               type="button"
-              className={[
-                'sa-mode-card',
-                settings.layoutMode === item.value ? 'is-active' : '',
-              ]
+              className={['sa-mode-card', settings.layoutMode === item.value ? 'is-active' : '']
                 .filter(Boolean)
                 .join(' ')}
               onClick={() => updateSettings({ layoutMode: item.value as LayoutMode })}
@@ -85,7 +83,7 @@ export function SettingsDrawer() {
         <h4>{t('layout.settings.themeColor')}</h4>
         <div className="sa-color-list">
           {availableThemeColors.map((item) => {
-            const active = item.color.toLowerCase() === colorPrimary.toLowerCase()
+            const active = item.color.toLowerCase() === colorPrimary.toLowerCase();
             return (
               <Tooltip
                 key={item.color}
@@ -93,9 +91,7 @@ export function SettingsDrawer() {
               >
                 <button
                   type="button"
-                  className={['sa-color-item', active ? 'is-active' : '']
-                    .filter(Boolean)
-                    .join(' ')}
+                  className={['sa-color-item', active ? 'is-active' : ''].filter(Boolean).join(' ')}
                   style={{ background: item.color }}
                   disabled={item.disabled}
                   aria-label={item.title}
@@ -104,7 +100,7 @@ export function SettingsDrawer() {
                   {active ? <Check size={14} strokeWidth={3} color="#fff" /> : null}
                 </button>
               </Tooltip>
-            )
+            );
           })}
         </div>
         <div className="sa-color-custom">
@@ -152,5 +148,5 @@ export function SettingsDrawer() {
         />
       </section>
     </Drawer>
-  )
+  );
 }

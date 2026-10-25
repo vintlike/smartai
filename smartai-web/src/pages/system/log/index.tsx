@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function LogPage() {
   return (
@@ -7,5 +7,5 @@ export default function LogPage() {
       path="/system/log"
       description="业务示例：登录日志与操作日志。"
     />
-  )
+  );
 }

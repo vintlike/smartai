@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function KnowledgePage() {
   return (
@@ -7,5 +7,5 @@ export default function KnowledgePage() {
       path="/aigc/knowledge"
       description="业务示例：知识库、文档切片与召回测试。"
     />
-  )
+  );
 }

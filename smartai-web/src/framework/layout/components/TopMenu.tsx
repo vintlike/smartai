@@ -1,53 +1,52 @@
-import { Menu } from 'antd'
-import type { MenuProps } from 'antd'
-import { useCallback, useMemo } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { buildMenuItems } from '../../menu/menuItems'
-import { flattenMenuTree } from '../../menu/menuUtils'
-import { useMenu } from '../../menu/MenuProvider'
-import { useMenuTitle } from '../../menu/useMenuTitle'
+import type { MenuProps } from 'antd';
+import { Menu } from 'antd';
+import { useCallback, useMemo } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { useMenu } from '../../menu/MenuProvider';
+import { buildMenuItems } from '../../menu/menuItems';
+import { flattenMenuTree } from '../../menu/menuUtils';
+import { useMenuTitle } from '../../menu/useMenuTitle';
 
 export interface TopMenuProps {
   /** leaf: 高亮最终页面；top: 混合模式下高亮顶级菜单 */
-  highlight?: 'leaf' | 'top'
-  className?: string
+  highlight?: 'leaf' | 'top';
+  className?: string;
 }
 
 /** 顶部横向菜单，多级菜单通过下拉展开 */
 export function TopMenu({ highlight = 'leaf', className }: TopMenuProps) {
-  const { menuTree, iconPrefix, getMenuChain } = useMenu()
-  const getTitle = useMenuTitle()
-  const location = useLocation()
-  const navigate = useNavigate()
+  const { menuTree, iconPrefix, getMenuChain } = useMenu();
+  const getTitle = useMenuTitle();
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const nodeIndex = useMemo(
     () => new Map(flattenMenuTree(menuTree).map((node) => [node.path, node])),
     [menuTree],
-  )
+  );
   const items = useMemo(
     () => buildMenuItems(menuTree, { iconPrefix, getTitle }),
     [menuTree, iconPrefix, getTitle],
-  )
+  );
 
-  const chain = getMenuChain(location.pathname)
+  const chain = useMemo(() => getMenuChain(location.pathname), [getMenuChain, location.pathname]);
   const selectedKeys = useMemo(() => {
-    if (chain.length === 0) return []
-    const target = highlight === 'top' ? chain[0]! : chain[chain.length - 1]!
-    return [target.path]
-  }, [chain, highlight])
+    const target = highlight === 'top' ? chain.at(0) : chain.at(-1);
+    return target ? [target.path] : [];
+  }, [chain, highlight]);
 
   const handleClick = useCallback<NonNullable<MenuProps['onClick']>>(
     ({ key }) => {
-      const node = nodeIndex.get(key)
-      if (!node) return
+      const node = nodeIndex.get(key);
+      if (!node) return;
       if (node.isExternal) {
-        window.open(node.path, '_blank', 'noopener,noreferrer')
-        return
+        window.open(node.path, '_blank', 'noopener,noreferrer');
+        return;
       }
-      if (!node.isGroup) navigate(key)
+      if (!node.isGroup) navigate(key);
     },
     [nodeIndex, navigate],
-  )
+  );
 
   return (
     <Menu
@@ -58,5 +57,5 @@ export function TopMenu({ highlight = 'leaf', className }: TopMenuProps) {
       onClick={handleClick}
       style={{ borderBottom: 'none' }}
     />
-  )
+  );
 }

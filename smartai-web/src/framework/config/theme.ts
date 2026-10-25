@@ -8,16 +8,16 @@ export const layoutModes = [
   { value: 'vertical', label: '左侧菜单模式' },
   { value: 'horizontal', label: '顶部菜单模式' },
   { value: 'blend', label: '混合菜单模式' },
-] as const
+] as const;
 
 /** 主题风格 */
 export const themeModes = [
   { value: 'light', label: '亮色风格' },
   { value: 'dark', label: '暗黑模式' },
-] as const
+] as const;
 
 /** 主题色 */
-export const colorPrimary = '#415fff'
+export const colorPrimary = '#415fff';
 
 /** UI设计色卡 */
 export const uiColors = {
@@ -33,13 +33,13 @@ export const uiColors = {
   colorInfo: '#72caed',
   /** 链接 */
   colorLink: colorPrimary,
-} as const
+} as const;
 
 export interface ThemeColorOption {
-  color: string
-  title: string
-  description?: string
-  disabled?: boolean
+  color: string;
+  title: string;
+  description?: string;
+  disabled?: boolean;
 }
 
 /** 平台主题色切换 */
@@ -60,7 +60,7 @@ export const themeColors: ThemeColorOption[] = [
   { color: '#2f54eb', title: '极客蓝', description: '探索、钻研' },
   { color: '#722ed1', title: '酱紫', description: '优雅、浪漫' },
   { color: '#eb2f96', title: '法式洋红', description: '明快、感性' },
-]
+];
 
 /** 报表色卡 */
 export const chartColors: string[] = [
@@ -84,26 +84,26 @@ export const chartColors: string[] = [
   '#7b82be',
   '#7eb9aa',
   '#ddb07a',
-]
+];
 
-export type LayoutMode = (typeof layoutModes)[number]['value']
-export type ThemeMode = (typeof themeModes)[number]['value']
+export type LayoutMode = (typeof layoutModes)[number]['value'];
+export type ThemeMode = (typeof themeModes)[number]['value'];
 
-export const defaultLayoutMode: LayoutMode = 'vertical'
-export const defaultThemeMode: ThemeMode = 'light'
+export const defaultLayoutMode: LayoutMode = 'vertical';
+export const defaultThemeMode: ThemeMode = 'light';
 
 /** 主题 Token：亮/暗两套设计令牌，统一注入 antd 与全局 CSS 变量 */
 export interface ThemeToken {
-  colorBgLayout: string
-  colorBgContainer: string
-  colorBgElevated?: string
-  colorBorder: string
-  colorBorderSecondary: string
-  colorSplit: string
+  colorBgLayout: string;
+  colorBgContainer: string;
+  colorBgElevated?: string;
+  colorBorder: string;
+  colorBorderSecondary: string;
+  colorSplit: string;
   /** 滚动条颜色：`滑块颜色` 或 `滑块颜色 轨道颜色` */
-  scrollbarColor: string
-  scrollbarWidth?: 'thin' | 'auto' | 'none'
-  scrollbarGutter?: 'stable' | 'auto'
+  scrollbarColor: string;
+  scrollbarWidth?: 'thin' | 'auto' | 'none';
+  scrollbarGutter?: 'stable' | 'auto';
 }
 
 /** 亮色主题 Token */
@@ -114,7 +114,7 @@ export const lightThemeToken: ThemeToken = {
   colorBorderSecondary: '#f0f0f0',
   colorSplit: '#f0f0f0',
   scrollbarColor: '#c1c1c1',
-}
+};
 
 /** 暗色主题 Token */
 export const darkThemeToken: ThemeToken = {
@@ -127,11 +127,10 @@ export const darkThemeToken: ThemeToken = {
   scrollbarColor: '#1890ff #f0f0f0',
   scrollbarWidth: 'thin',
   scrollbarGutter: 'stable',
-}
+};
 
 /** 主题风格 -> Token 映射 */
 export const themeTokens: Record<ThemeMode, ThemeToken> = {
   light: lightThemeToken,
   dark: darkThemeToken,
-}
-
+};

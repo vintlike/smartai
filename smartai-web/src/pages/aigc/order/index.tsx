@@ -1,4 +1,4 @@
-import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder'
+import { PagePlaceholder } from '@/pages/_shared/PagePlaceholder';
 
 export default function OrderPage() {
   return (
@@ -7,5 +7,5 @@ export default function OrderPage() {
       path="/aigc/order"
       description="业务示例：用量账单与统计报表。"
     />
-  )
+  );
 }

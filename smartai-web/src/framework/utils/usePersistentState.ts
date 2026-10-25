@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react'
-import { readStorage, writeStorage } from './storage'
+import { useCallback, useEffect, useState } from 'react';
+import { readStorage, writeStorage } from './storage';
 
 /**
  * localStorage 持久化 state。
@@ -12,15 +12,15 @@ export function usePersistentState<T extends object>(
   const [state, setState] = useState<T>(() => ({
     ...defaults,
     ...readStorage<Partial<T>>(key, {}),
-  }))
+  }));
 
   const update = useCallback((patch: Partial<T> | ((prev: T) => T)) => {
-    setState((prev) => (typeof patch === 'function' ? patch(prev) : { ...prev, ...patch }))
-  }, [])
+    setState((prev) => (typeof patch === 'function' ? patch(prev) : { ...prev, ...patch }));
+  }, []);
 
   useEffect(() => {
-    writeStorage(key, state)
-  }, [key, state])
+    writeStorage(key, state);
+  }, [key, state]);
 
-  return [state, update]
+  return [state, update];
 }

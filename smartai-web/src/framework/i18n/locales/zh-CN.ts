@@ -1,4 +1,4 @@
-import type { I18nMessages } from '../types'
+import type { I18nMessages } from '../types';
 
 const zhCN: I18nMessages = {
   common: {
@@ -62,6 +62,6 @@ const zhCN: I18nMessages = {
       description: '菜单 component 未匹配到 src/pages 下的页面文件：',
     },
   },
-}
+};
 
-export default zhCN
+export default zhCN;

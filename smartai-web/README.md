@@ -46,11 +46,11 @@ src/
 - 菜单由接口返回，`MenuProvider` 完成归一化、排序、过滤（`show: false`、`type: 'button'`、`meta.hideInMenu`）。
 - `component` 与 `src/pages` 下的文件路径约定映射：
 
-| 菜单 component        | 页面文件                          |
-| --------------------- | --------------------------------- |
-| `/chat/index`         | `src/pages/chat/index.tsx`        |
-| `/aigc/model/index`   | `src/pages/aigc/model/index.tsx`  |
-| `Layout`              | 分组节点，不渲染页面              |
+| 菜单 component      | 页面文件                         |
+| ------------------- | -------------------------------- |
+| `/chat/index`       | `src/pages/chat/index.tsx`       |
+| `/aigc/model/index` | `src/pages/aigc/model/index.tsx` |
+| `Layout`            | 分组节点，不渲染页面             |
 
 找不到页面文件时会渲染「页面组件未找到」提示，而不是白屏。
 
@@ -150,23 +150,23 @@ src/
       </MenuProvider>
     </ThemeProvider>
   </I18nProvider>
-</BrowserRouter>
+</BrowserRouter>;
 ```
 
-| Provider          | 主要能力                                             |
-| ----------------- | ---------------------------------------------------- |
-| `I18nProvider`    | 语言包合并、`t` / `has`、语言持久化                  |
-| `ThemeProvider`   | 亮暗主题、主题色、antd `ConfigProvider` 集成         |
-| `MenuProvider`    | 菜单请求、归一化、菜单链查询、路由高亮数据           |
-| `LayoutProvider`  | 菜单模式、收起状态、多 Tab（含刷新）、设置抽屉       |
+| Provider         | 主要能力                                       |
+| ---------------- | ---------------------------------------------- |
+| `I18nProvider`   | 语言包合并、`t` / `has`、语言持久化            |
+| `ThemeProvider`  | 亮暗主题、主题色、antd `ConfigProvider` 集成   |
+| `MenuProvider`   | 菜单请求、归一化、菜单链查询、路由高亮数据     |
+| `LayoutProvider` | 菜单模式、收起状态、多 Tab（含刷新）、设置抽屉 |
 
 对应的 hooks：`useI18n`、`useTheme`、`useMenu`、`useLayout`、`useMenuTitle`。
 
 ### 7. 国际化
 
 ```tsx
-const { t, locale, setLocale } = useI18n()
-t('layout.settings.title')          // 支持 {name} 插值
+const { t, locale, setLocale } = useI18n();
+t('layout.settings.title'); // 支持 {name} 插值
 ```
 
 业务语言包通过 `I18nProvider` 的 `messages` 传入，会与框架语言包深度合并：
@@ -175,16 +175,16 @@ t('layout.settings.title')          // 支持 {name} 插值
 const businessMessages = {
   'zh-CN': { business: { title: '业务标题' } },
   'en-US': { business: { title: 'Business Title' } },
-}
+};
 ```
 
 ### 8. 持久化
 
-| key                        | 内容                       |
-| -------------------------- | -------------------------- |
-| `smartai:theme-settings`   | 主题风格、主题色           |
-| `smartai:layout-settings`  | 菜单模式、收起、Tab、面包屑 |
-| `smartai:locale`           | 当前语言                   |
+| key                       | 内容                        |
+| ------------------------- | --------------------------- |
+| `smartai:theme-settings`  | 主题风格、主题色            |
+| `smartai:layout-settings` | 菜单模式、收起、Tab、面包屑 |
+| `smartai:locale`          | 当前语言                    |
 
 可通过各 Provider 的 `storageKey` 覆盖。
 

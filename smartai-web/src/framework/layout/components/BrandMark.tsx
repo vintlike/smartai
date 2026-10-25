@@ -14,5 +14,5 @@ export function BrandMark({ size = 28 }: { size?: number }) {
         fill="#fff"
       />
     </svg>
-  )
+  );
 }

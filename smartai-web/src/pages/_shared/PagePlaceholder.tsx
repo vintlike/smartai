@@ -1,9 +1,9 @@
-import { Card, Space, Tag, Typography } from 'antd'
+import { Card, Space, Tag, Typography } from 'antd';
 
 export interface PagePlaceholderProps {
-  title: string
-  path: string
-  description?: string
+  title: string;
+  path: string;
+  description?: string;
 }
 
 /** 业务页面占位组件：替换 src/pages 下对应文件即可接入真实业务 */
@@ -23,8 +23,10 @@ export function PagePlaceholder({ title, path, description }: PagePlaceholderPro
           <Tag color="processing">路由</Tag>
           <Typography.Text code>{path}</Typography.Text>
         </Space>
-        {description ? <Typography.Paragraph type="secondary">{description}</Typography.Paragraph> : null}
+        {description ? (
+          <Typography.Paragraph type="secondary">{description}</Typography.Paragraph>
+        ) : null}
       </Space>
     </Card>
-  )
+  );
 }

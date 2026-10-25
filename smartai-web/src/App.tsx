@@ -1,8 +1,8 @@
-import { App as AntdApp } from 'antd'
-import { BrowserRouter } from 'react-router-dom'
-import { I18nProvider, LayoutProvider, MenuProvider, ThemeProvider } from '@/framework'
-import { AppRouter } from '@/router/AppRouter'
-import { fetchMenuList } from '@/services/menu'
+import { App as AntdApp } from 'antd';
+import { BrowserRouter } from 'react-router-dom';
+import { I18nProvider, LayoutProvider, MenuProvider, ThemeProvider } from '@/framework';
+import { AppRouter } from '@/router/AppRouter';
+import { fetchMenuList } from '@/services/menu';
 
 /**
  * 应用装配：Provider 的顺序即框架能力边界。
@@ -24,5 +24,5 @@ export default function App() {
         </ThemeProvider>
       </I18nProvider>
     </BrowserRouter>
-  )
+  );
 }
