@@ -16,8 +16,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@iconify/react": "^6.0.3",
+    "antd": "^6.6.7",
+    "lucide-react": "^1.61.0",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
   },
   "devDependencies": {
     "@types/node": "^24.19.2",
