@@ -1,5 +1,5 @@
-import { isExternalPath, joinPath, matchMenuPath } from '../utils/path';
-import type { AppMenuNode, MenuItem } from './types';
+import type { AppMenuNode, MenuItem } from '@/framework/menu/types';
+import { isExternalPath, joinPath, matchMenuPath } from '@/framework/utils/path';
 
 /** 兼容「扁平列表」与「嵌套 children」两种接口返回 */
 function toMenuTree(items: MenuItem[]): MenuItem[] {

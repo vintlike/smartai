@@ -1,9 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
-import { defaultStorageKeys } from '../config/settings';
-import { usePersistentState } from '../utils/usePersistentState';
-import enUS from './locales/en-US';
-import zhCN from './locales/zh-CN';
-import type { I18nContextValue, I18nMessages, I18nProviderProps, LocaleMessages } from './types';
+import { defaultStorageKeys } from '@/framework/config/settings';
+import enUS from '@/framework/i18n/locales/en-US';
+import zhCN from '@/framework/i18n/locales/zh-CN';
+import type {
+  I18nContextValue,
+  I18nMessages,
+  I18nProviderProps,
+  LocaleMessages,
+} from '@/framework/i18n/types';
+import { usePersistentState } from '@/framework/utils/usePersistentState';
 
 /** 框架内置语言包 */
 export const frameworkMessages: LocaleMessages = {

@@ -7,15 +7,12 @@ settings:
 importers:
   .:
     dependencies:
-      "@iconify/react":
-        specifier: ^6.0.3
-        version: 6.0.3(react@19.3.1)
+      "@ant-design/icons":
+        specifier: ^6.3.4
+        version: 6.3.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       antd:
         specifier: ^6.6.7
         version: 6.6.7(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      lucide-react:
-        specifier: ^1.61.0
-        version: 1.61.0(@types/react@19.3.0)(react@19.3.1)
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -131,20 +128,6 @@ packages:
     resolution:
       {
         integrity: sha512-OWORNpfjMsSSUBVrRBVGECkhWcULOAJz9ZW8uK9qgxD+87M7jHRcvh/A96XXNhXTLmKcoYSQtBEX7lHMO7YRwg==,
-      }
-
-  "@iconify/react@6.0.3":
-    resolution:
-      {
-        integrity: sha512-2x7gVs+tpUG75aXYo/0c5wPOqrFy75YSGKmuJZyuHyrHMydzXpI/+i9/USIzWXJL9WWc2BCgPVnGY2FhbeiiDQ==,
-      }
-    peerDependencies:
-      react: ">=18.0.0"
-
-  "@iconify/types@2.0.0":
-    resolution:
-      {
-        integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==,
       }
 
   "@oxc-project/types@0.155.0":
@@ -1197,18 +1180,6 @@ packages:
         integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==,
       }
 
-  lucide-react@1.61.0:
-    resolution:
-      {
-        integrity: sha512-v2SQPPPNjnr+BlhL9Spuzmo5yR+hLkftfuE4E3jaxdNPgSH0hJKPcLJBP7yAta87jQNPsSERS59PJjCJ/CorBA==,
-      }
-    peerDependencies:
-      "@types/react": "*"
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-    peerDependenciesMeta:
-      "@types/react":
-        optional: true
-
   make-dir@5.1.0:
     resolution:
       {
@@ -1558,13 +1529,6 @@ snapshots:
   "@emotion/hash@0.8.0": {}
 
   "@emotion/unitless@0.7.5": {}
-
-  "@iconify/react@6.0.3(react@19.3.1)":
-    dependencies:
-      "@iconify/types": 2.0.0
-      react: 19.3.1
-
-  "@iconify/types@2.0.0": {}
 
   "@oxc-project/types@0.155.0": {}
 
@@ -2219,12 +2183,6 @@ snapshots:
 
   lodash.merge@4.6.2:
     optional: true
-
-  lucide-react@1.61.0(@types/react@19.3.0)(react@19.3.1):
-    dependencies:
-      react: 19.3.1
-    optionalDependencies:
-      "@types/react": 19.3.0
 
   make-dir@5.1.0:
     optional: true

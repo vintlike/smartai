@@ -50,7 +50,7 @@ export interface AppMenuNode {
   title: string;
   /** i18n key */
   localeKey?: string;
-  /** iconify 图标名（原始值，渲染时再补全前缀） */
+  /** antd 图标名（原始值，由 menuIconMap 注册表解析） */
   icon?: string | null;
   orderNo: number;
   disabled: boolean;
@@ -69,11 +69,6 @@ export interface MenuProviderProps {
   children: ReactNode;
   /** 菜单请求方法，由业务层实现（如 axios / fetch） */
   request: MenuRequest;
-  /**
-   * 图标前缀，默认 'ion'。
-   * 若返回的图标名已带命名空间（如 'mdi:home'），则不再拼接前缀。
-   */
-  iconPrefix?: string;
   /** 在归一化前对接口数据做一次转换（筛选权限等） */
   transform?: (items: MenuItem[]) => MenuItem[];
 }
@@ -93,6 +88,5 @@ export interface MenuContextValue {
   getMenuNode: (path: string) => AppMenuNode | undefined;
   /** 第一个可访问的页面路径 */
   firstMenuPath: string;
-  iconPrefix: string;
   refresh: () => Promise<void>;
 }

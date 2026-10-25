@@ -1,9 +1,9 @@
+import { LogoutOutlined, UserOutlined } from '@ant-design/icons';
 import type { DescriptionsProps, MenuProps } from 'antd';
 import { App, Avatar, Descriptions, Dropdown, Modal } from 'antd';
-import { LogOut, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { currentUser, logout } from '@/services/user';
-import './UserMenu.less';
+import '@/components/UserMenu.less';
 
 /** 账号菜单：顶栏头像 + 下拉，展示当前登录账号信息，提供个人信息与退出登录 */
 export function UserMenu() {
@@ -38,9 +38,14 @@ export function UserMenu() {
   };
 
   const menuItems: MenuProps['items'] = [
-    { key: 'profile', icon: <UserRound size={14} />, label: '个人信息' },
+    { key: 'profile', icon: <UserOutlined style={{ fontSize: 14 }} />, label: '个人信息' },
     { type: 'divider' },
-    { key: 'logout', icon: <LogOut size={14} />, label: '退出登录', danger: true },
+    {
+      key: 'logout',
+      icon: <LogoutOutlined style={{ fontSize: 14 }} />,
+      label: '退出登录',
+      danger: true,
+    },
   ];
 
   return (

@@ -2,10 +2,10 @@ import type { MenuProps } from 'antd';
 import { Menu } from 'antd';
 import { useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMenu } from '../../menu/MenuProvider';
-import { buildMenuItems } from '../../menu/menuItems';
-import { flattenMenuTree } from '../../menu/menuUtils';
-import { useMenuTitle } from '../../menu/useMenuTitle';
+import { useMenu } from '@/framework/menu/MenuProvider';
+import { buildMenuItems } from '@/framework/menu/menuItems';
+import { flattenMenuTree } from '@/framework/menu/menuUtils';
+import { useMenuTitle } from '@/framework/menu/useMenuTitle';
 
 export interface TopMenuProps {
   /** leaf: 高亮最终页面；top: 混合模式下高亮顶级菜单 */
@@ -15,7 +15,7 @@ export interface TopMenuProps {
 
 /** 顶部横向菜单，多级菜单通过下拉展开 */
 export function TopMenu({ highlight = 'leaf', className }: TopMenuProps) {
-  const { menuTree, iconPrefix, getMenuChain } = useMenu();
+  const { menuTree, getMenuChain } = useMenu();
   const getTitle = useMenuTitle();
   const location = useLocation();
   const navigate = useNavigate();
@@ -24,10 +24,7 @@ export function TopMenu({ highlight = 'leaf', className }: TopMenuProps) {
     () => new Map(flattenMenuTree(menuTree).map((node) => [node.path, node])),
     [menuTree],
   );
-  const items = useMemo(
-    () => buildMenuItems(menuTree, { iconPrefix, getTitle }),
-    [menuTree, iconPrefix, getTitle],
-  );
+  const items = useMemo(() => buildMenuItems(menuTree, { getTitle }), [menuTree, getTitle]);
 
   const chain = useMemo(() => getMenuChain(location.pathname), [getMenuChain, location.pathname]);
   const selectedKeys = useMemo(() => {

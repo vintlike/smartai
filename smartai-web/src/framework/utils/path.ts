@@ -22,11 +22,3 @@ export function matchMenuPath(menuPath: string, pathname: string): boolean {
   if (menuPath === pathname) return true;
   return pathname.startsWith(`${menuPath}/`);
 }
-
-/** 驼峰转中划线：PaperPlaneOutline -> paper-plane-outline */
-export function camelToKebab(value: string): string {
-  return value
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .replace(/([A-Z])([A-Z][a-z])/g, '$1-$2')
-    .toLowerCase();
-}

@@ -38,6 +38,18 @@ src/
 └── App.tsx                    # Provider 装配
 ```
 
+### 路径别名约定
+
+`src` 内所有模块导入统一使用 `@` 别名（`@` → `src`），包括同级文件与样式：
+
+```tsx
+import { MenuProvider } from '@/framework/menu/MenuProvider';
+import '@/components/UserMenu.less';
+```
+
+不要写成 `./UserMenu.less` 或 `../framework/menu/MenuProvider`。
+别名在 `tsconfig.app.json` 的 `paths` 与 `vite.config.ts` 的 `resolve.alias` 中同步声明；`biome` 已配置 `style/noRestrictedImports` 拦截 `./` 与 `../` 相对导入，写回即报错。
+
 ## 框架能力
 
 ### 1. 菜单与路由
@@ -80,7 +92,7 @@ src/
 说明：
 
 - `path` 支持子级已带父级前缀（如 `aigc` + `aigc/embed-store`）。
-- `icon` 支持 iconify 名称（`mdi:home`）或后端常见写法（`PaperPlaneOutline` → `ion:paper-plane-outline`），可通过 `MenuProvider` 的 `iconPrefix` 修改前缀。
+- `icon` 统一使用 antd 图标，写图标组件名（`DashboardOutlined`）或短名（`dashboard` / `dashboard-outlined`）均可，归一化后忽略大小写、连字符与命名空间前缀；可用图标须在 `src/framework/menu/menuIconMap.ts` 注册，未注册不渲染图标（历史 ionicons 写法如 `GridOutline` 也做了别名兼容）。
 - `meta.localeKey` 可选，存在且命中语言包时菜单标题走 i18n。
 - `isExt: true` 或 `path` 为 URL 时按外链处理（新窗口打开）。
 - `disabled`、`keepalive` 字段已解析并保留，keepalive 暂未做页面缓存。
@@ -143,7 +155,7 @@ src/
 <BrowserRouter>
   <I18nProvider messages={businessMessages} defaultLocale="zh-CN">
     <ThemeProvider defaultSettings={{ mode: 'light' }}>
-      <MenuProvider request={fetchMenuList} iconPrefix="ion">
+      <MenuProvider request={fetchMenuList}>
         <LayoutProvider>
           <AppRouter />
         </LayoutProvider>

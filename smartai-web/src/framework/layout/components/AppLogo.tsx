@@ -1,7 +1,7 @@
 import type { MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useLayout } from '../LayoutProvider';
-import { BrandMark } from './BrandMark';
+import { BrandMark } from '@/framework/layout/components/BrandMark';
+import { useLayout } from '@/framework/layout/LayoutProvider';
 
 export interface AppLogoProps {
   collapsed?: boolean;

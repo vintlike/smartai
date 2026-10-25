@@ -104,6 +104,21 @@
         "noDangerouslySetInnerHtml": "warn"
       },
       "style": {
+        "noRestrictedImports": {
+          "level": "error",
+          "options": {
+            "patterns": [
+              {
+                "group": ["../*", "../**"],
+                "message": "项目内导入必须使用 @/ 别名，禁止 ../ 跨目录相对路径"
+              },
+              {
+                "group": ["./*", "./**"],
+                "message": "项目内导入必须使用 @/ 别名，禁止 ./ 相对路径"
+              }
+            ]
+          }
+        },
         "noParameterAssign": "warn",
         "useDefaultParameterLast": "warn",
         "useLiteralEnumMembers": "warn",

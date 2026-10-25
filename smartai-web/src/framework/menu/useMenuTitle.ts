@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
-import { useI18n } from '../i18n/I18nProvider';
-import type { AppMenuNode } from './types';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import type { AppMenuNode } from '@/framework/menu/types';
 
 /** 菜单标题解析：优先 meta.localeKey，其次使用接口返回的 title */
 export function useMenuTitle() {

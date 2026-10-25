@@ -10,7 +10,7 @@ import {
   PageLoading,
   useMenu,
 } from '@/framework';
-import { resolvePageComponent } from './pageRegistry';
+import { resolvePageComponent } from '@/router/pageRegistry';
 
 /**
  * 根据接口菜单动态生成路由。

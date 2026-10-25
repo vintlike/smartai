@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { readStorage, writeStorage } from './storage';
+import { readStorage, writeStorage } from '@/framework/utils/storage';
 
 /**
  * localStorage 持久化 state。

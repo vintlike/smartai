@@ -1,5 +1,5 @@
-import type { LayoutMode, ThemeMode } from './theme';
-import { colorPrimary, defaultLayoutMode, defaultThemeMode } from './theme';
+import type { LayoutMode, ThemeMode } from '@/framework/config/theme';
+import { colorPrimary, defaultLayoutMode, defaultThemeMode } from '@/framework/config/theme';
 
 /** 布局设置：全部可持久化，全部与业务无关 */
 export interface LayoutSettings {

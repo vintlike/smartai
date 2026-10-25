@@ -2,11 +2,11 @@ import type { MenuProps } from 'antd';
 import { Menu } from 'antd';
 import { useCallback, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useMenu } from '../../menu/MenuProvider';
-import { buildMenuItems } from '../../menu/menuItems';
-import { flattenMenuTree } from '../../menu/menuUtils';
-import type { AppMenuNode } from '../../menu/types';
-import { useMenuTitle } from '../../menu/useMenuTitle';
+import { useMenu } from '@/framework/menu/MenuProvider';
+import { buildMenuItems } from '@/framework/menu/menuItems';
+import { flattenMenuTree } from '@/framework/menu/menuUtils';
+import type { AppMenuNode } from '@/framework/menu/types';
+import { useMenuTitle } from '@/framework/menu/useMenuTitle';
 
 export interface SideMenuProps {
   nodes: AppMenuNode[];
@@ -15,7 +15,7 @@ export interface SideMenuProps {
 
 /** 侧边内联菜单：自动展开并高亮当前路径的父级菜单 */
 export function SideMenu({ nodes, collapsed }: SideMenuProps) {
-  const { iconPrefix, getMenuChain } = useMenu();
+  const { getMenuChain } = useMenu();
   const getTitle = useMenuTitle();
   const location = useLocation();
   const navigate = useNavigate();
@@ -38,10 +38,7 @@ export function SideMenu({ nodes, collapsed }: SideMenuProps) {
         new Set([...activeOpenKeys, ...manualOpenKeys.filter((key) => nodePaths.has(key))]),
       );
 
-  const items = useMemo(
-    () => buildMenuItems(nodes, { iconPrefix, getTitle }),
-    [nodes, iconPrefix, getTitle],
-  );
+  const items = useMemo(() => buildMenuItems(nodes, { getTitle }), [nodes, getTitle]);
 
   const handleClick = useCallback<NonNullable<MenuProps['onClick']>>(
     ({ key }) => {

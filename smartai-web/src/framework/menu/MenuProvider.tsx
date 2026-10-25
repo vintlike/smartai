@@ -13,17 +13,12 @@ import {
   getFirstMenuPath,
   getMenuLeaves,
   normalizeMenuTree,
-} from './menuUtils';
-import type { MenuContextValue, MenuItem, MenuProviderProps } from './types';
+} from '@/framework/menu/menuUtils';
+import type { MenuContextValue, MenuItem, MenuProviderProps } from '@/framework/menu/types';
 
 const MenuContext = createContext<MenuContextValue | null>(null);
 
-export function MenuProvider({
-  children,
-  request,
-  iconPrefix = 'ion',
-  transform,
-}: MenuProviderProps) {
+export function MenuProvider({ children, request, transform }: MenuProviderProps) {
   const [rawMenus, setRawMenus] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -73,21 +68,9 @@ export function MenuProvider({
       getMenuChain,
       getMenuNode,
       firstMenuPath,
-      iconPrefix,
       refresh: load,
     }),
-    [
-      loading,
-      error,
-      rawMenus,
-      menuTree,
-      leaves,
-      getMenuChain,
-      getMenuNode,
-      firstMenuPath,
-      iconPrefix,
-      load,
-    ],
+    [loading, error, rawMenus, menuTree, leaves, getMenuChain, getMenuNode, firstMenuPath, load],
   );
 
   return <MenuContext.Provider value={value}>{children}</MenuContext.Provider>;

@@ -1,10 +1,10 @@
+import { CheckOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, ColorPicker, Drawer, Segmented, Switch, Tooltip } from 'antd';
-import { Check, RefreshCw } from 'lucide-react';
-import type { LayoutMode, ThemeMode } from '../../config/theme';
-import { layoutModes, themeColors, themeModes } from '../../config/theme';
-import { useI18n } from '../../i18n/I18nProvider';
-import { useTheme } from '../../theme/ThemeProvider';
-import { useLayout } from '../LayoutProvider';
+import type { LayoutMode, ThemeMode } from '@/framework/config/theme';
+import { layoutModes, themeColors, themeModes } from '@/framework/config/theme';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import { useLayout } from '@/framework/layout/LayoutProvider';
+import { useTheme } from '@/framework/theme/ThemeProvider';
 
 /** 可选主题色：隐藏配置中标记为 disabled 的色板 */
 const availableThemeColors = themeColors.filter((item) => !item.disabled);
@@ -38,7 +38,12 @@ export function SettingsDrawer() {
       onClose={closeSettings}
       size={332}
       extra={
-        <Button type="text" size="small" icon={<RefreshCw size={14} />} onClick={handleReset}>
+        <Button
+          type="text"
+          size="small"
+          icon={<ReloadOutlined style={{ fontSize: 14 }} />}
+          onClick={handleReset}
+        >
           {t('layout.settings.reset')}
         </Button>
       }
@@ -97,7 +102,7 @@ export function SettingsDrawer() {
                   aria-label={item.title}
                   onClick={() => setColorPrimary(item.color)}
                 >
-                  {active ? <Check size={14} strokeWidth={3} color="#fff" /> : null}
+                  {active ? <CheckOutlined style={{ fontSize: 14, color: '#fff' }} /> : null}
                 </button>
               </Tooltip>
             );

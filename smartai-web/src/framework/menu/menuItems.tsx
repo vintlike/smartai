@@ -1,12 +1,11 @@
+import { ExportOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
-import { ExternalLink } from 'lucide-react';
-import { MenuIcon } from './MenuIcon';
-import type { AppMenuNode } from './types';
+import { MenuIcon } from '@/framework/menu/MenuIcon';
+import type { AppMenuNode } from '@/framework/menu/types';
 
 export type AntdMenuItem = NonNullable<MenuProps['items']>[number];
 
 export interface BuildMenuItemsOptions {
-  iconPrefix?: string;
   getTitle?: (node: AppMenuNode) => string;
 }
 
@@ -17,7 +16,7 @@ function renderMenuLabel(node: AppMenuNode, title: string) {
   return (
     <span className="sa-menu-label">
       {title}
-      <ExternalLink className="sa-menu-label__external" size={12} />
+      <ExportOutlined className="sa-menu-label__external" style={{ fontSize: 12 }} aria-hidden />
     </span>
   );
 }
@@ -36,7 +35,7 @@ export function buildMenuItems(
 
     const base: AntdMenuItem = {
       key: node.path,
-      icon: <MenuIcon icon={node.icon} iconPrefix={options.iconPrefix} />,
+      icon: <MenuIcon icon={node.icon} />,
       label,
       disabled: node.disabled,
     };

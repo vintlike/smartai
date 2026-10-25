@@ -1,11 +1,17 @@
+import {
+  ArrowLeftOutlined,
+  ArrowRightOutlined,
+  CloseOutlined,
+  DownOutlined,
+  ReloadOutlined,
+} from '@ant-design/icons';
 import type { MenuProps, TabsProps } from 'antd';
 import { Button, Dropdown, Tabs, Tooltip } from 'antd';
-import { ArrowLeftToLine, ArrowRightToLine, ChevronDown, RotateCw, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../../i18n/I18nProvider';
-import { useMenu } from '../../menu/MenuProvider';
-import { useMenuTitle } from '../../menu/useMenuTitle';
-import { useLayout } from '../LayoutProvider';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import { useLayout } from '@/framework/layout/LayoutProvider';
+import { useMenu } from '@/framework/menu/MenuProvider';
+import { useMenuTitle } from '@/framework/menu/useMenuTitle';
 
 /**
  * 多 Tab 标签页：
@@ -41,30 +47,34 @@ export function TabsBar() {
       targetIndex !== -1 && tabs.slice(targetIndex + 1).some((tab) => tab.closable);
 
     return [
-      { key: 'refresh', label: t('layout.tabs.refresh'), icon: <RotateCw size={14} /> },
+      {
+        key: 'refresh',
+        label: t('layout.tabs.refresh'),
+        icon: <ReloadOutlined style={{ fontSize: 14 }} />,
+      },
       { type: 'divider' },
       {
         key: 'close',
         label: t('layout.tabs.close'),
-        icon: <X size={14} />,
+        icon: <CloseOutlined style={{ fontSize: 14 }} />,
         disabled: closeDisabled,
       },
       {
         key: 'closeOthers',
         label: t('layout.tabs.closeOthers'),
-        icon: <X size={14} />,
+        icon: <CloseOutlined style={{ fontSize: 14 }} />,
         disabled: !hasOtherClosable,
       },
       {
         key: 'closeLeft',
         label: t('layout.tabs.closeLeft'),
-        icon: <ArrowLeftToLine size={14} />,
+        icon: <ArrowLeftOutlined style={{ fontSize: 14 }} />,
         disabled: !hasLeftClosable,
       },
       {
         key: 'closeRight',
         label: t('layout.tabs.closeRight'),
-        icon: <ArrowRightToLine size={14} />,
+        icon: <ArrowRightOutlined style={{ fontSize: 14 }} />,
         disabled: !hasRightClosable,
       },
     ];
@@ -98,7 +108,7 @@ export function TabsBar() {
           size="small"
           className="sa-icon-btn"
           aria-label={t('layout.tabs.refresh')}
-          icon={<RotateCw size={15} />}
+          icon={<ReloadOutlined style={{ fontSize: 15 }} />}
           onClick={() => refreshTab()}
         />
       </Tooltip>
@@ -116,7 +126,7 @@ export function TabsBar() {
           size="small"
           className="sa-icon-btn"
           aria-label={t('layout.tabs.more')}
-          icon={<ChevronDown size={15} />}
+          icon={<DownOutlined style={{ fontSize: 15 }} />}
         />
       </Dropdown>
     </div>

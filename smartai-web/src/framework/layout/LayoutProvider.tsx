@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import type { LogoConfig } from '../config/logo';
-import { defaultLogoConfig } from '../config/logo';
-import type { LayoutSettings } from '../config/settings';
-import { defaultLayoutSettings, defaultStorageKeys } from '../config/settings';
-import type { LayoutMode } from '../config/theme';
-import { usePersistentState } from '../utils/usePersistentState';
+import type { LogoConfig } from '@/framework/config/logo';
+import { defaultLogoConfig } from '@/framework/config/logo';
+import type { LayoutSettings } from '@/framework/config/settings';
+import { defaultLayoutSettings, defaultStorageKeys } from '@/framework/config/settings';
+import type { LayoutMode } from '@/framework/config/theme';
+import { usePersistentState } from '@/framework/utils/usePersistentState';
 
 export interface TabItem {
   key: string;

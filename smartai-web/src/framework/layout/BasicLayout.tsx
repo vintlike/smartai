@@ -2,17 +2,17 @@ import { Layout, theme } from 'antd';
 import type { ReactNode } from 'react';
 import { Suspense, useEffect, useMemo } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { defaultCollapsedWidth, defaultSiderWidth } from '../config/settings';
-import { useMenu } from '../menu/MenuProvider';
-import { useMenuTitle } from '../menu/useMenuTitle';
-import { AppLogo } from './components/AppLogo';
-import { LayoutHeader } from './components/LayoutHeader';
-import { PageLoading } from './components/PageLoading';
-import { SettingsDrawer } from './components/SettingsDrawer';
-import { SideMenu } from './components/SideMenu';
-import { TabsBar } from './components/TabsBar';
-import { useLayout } from './LayoutProvider';
-import '../styles/layout.less';
+import { defaultCollapsedWidth, defaultSiderWidth } from '@/framework/config/settings';
+import { AppLogo } from '@/framework/layout/components/AppLogo';
+import { LayoutHeader } from '@/framework/layout/components/LayoutHeader';
+import { PageLoading } from '@/framework/layout/components/PageLoading';
+import { SettingsDrawer } from '@/framework/layout/components/SettingsDrawer';
+import { SideMenu } from '@/framework/layout/components/SideMenu';
+import { TabsBar } from '@/framework/layout/components/TabsBar';
+import { useLayout } from '@/framework/layout/LayoutProvider';
+import { useMenu } from '@/framework/menu/MenuProvider';
+import { useMenuTitle } from '@/framework/menu/useMenuTitle';
+import '@/framework/styles/layout.less';
 
 const { Content, Sider } = Layout;
 

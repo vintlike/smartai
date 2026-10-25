@@ -1,4 +1,4 @@
-import type { I18nMessages } from '../types';
+import type { I18nMessages } from '@/framework/i18n/types';
 
 const enUS: I18nMessages = {
   common: {

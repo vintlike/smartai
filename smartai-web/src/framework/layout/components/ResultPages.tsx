@@ -1,7 +1,7 @@
 import { Button, Result } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '../../i18n/I18nProvider';
-import { useMenu } from '../../menu/MenuProvider';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import { useMenu } from '@/framework/menu/MenuProvider';
 
 export function NotFoundPage() {
   const { t } = useI18n();

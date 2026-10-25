@@ -1,5 +1,5 @@
 import type { MenuItem } from '@/framework';
-import mockMenus from './mock-menu';
+import mockMenus from '@/services/mock-menu';
 
 const MENU_API = import.meta.env.VITE_MENU_API as string | undefined;
 

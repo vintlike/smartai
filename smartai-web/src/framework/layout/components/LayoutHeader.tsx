@@ -1,12 +1,12 @@
+import { MenuFoldOutlined, MenuUnfoldOutlined } from '@ant-design/icons';
 import { Button, Layout, Tooltip, theme } from 'antd';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useI18n } from '../../i18n/I18nProvider';
-import { useLayout } from '../LayoutProvider';
-import { AppLogo } from './AppLogo';
-import { HeaderActions } from './HeaderActions';
-import { LayoutBreadcrumb } from './LayoutBreadcrumb';
-import { TopMenu } from './TopMenu';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import { AppLogo } from '@/framework/layout/components/AppLogo';
+import { HeaderActions } from '@/framework/layout/components/HeaderActions';
+import { LayoutBreadcrumb } from '@/framework/layout/components/LayoutBreadcrumb';
+import { TopMenu } from '@/framework/layout/components/TopMenu';
+import { useLayout } from '@/framework/layout/LayoutProvider';
 
 const { Header } = Layout;
 
@@ -43,7 +43,13 @@ export function LayoutHeader({ actions }: LayoutHeaderProps) {
                 className="sa-icon-btn"
                 aria-label={collapsed ? t('layout.header.expand') : t('layout.header.collapse')}
                 onClick={toggleCollapsed}
-                icon={collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+                icon={
+                  collapsed ? (
+                    <MenuUnfoldOutlined style={{ fontSize: 18 }} />
+                  ) : (
+                    <MenuFoldOutlined style={{ fontSize: 18 }} />
+                  )
+                }
               />
             </Tooltip>
             {showBreadcrumb ? <LayoutBreadcrumb /> : null}

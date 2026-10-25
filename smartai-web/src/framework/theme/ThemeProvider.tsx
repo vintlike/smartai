@@ -5,12 +5,16 @@ import enUS from 'antd/locale/en_US';
 import zhCN from 'antd/locale/zh_CN';
 import type { ReactNode } from 'react';
 import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
-import type { ThemeSettings } from '../config/settings';
-import { defaultHeaderHeight, defaultStorageKeys, defaultThemeSettings } from '../config/settings';
-import type { ThemeMode, ThemeToken } from '../config/theme';
-import { themeTokens } from '../config/theme';
-import { useI18n } from '../i18n/I18nProvider';
-import { usePersistentState } from '../utils/usePersistentState';
+import type { ThemeSettings } from '@/framework/config/settings';
+import {
+  defaultHeaderHeight,
+  defaultStorageKeys,
+  defaultThemeSettings,
+} from '@/framework/config/settings';
+import type { ThemeMode, ThemeToken } from '@/framework/config/theme';
+import { themeTokens } from '@/framework/config/theme';
+import { useI18n } from '@/framework/i18n/I18nProvider';
+import { usePersistentState } from '@/framework/utils/usePersistentState';
 
 const antdLocales: Record<string, Locale> = {
   'zh-CN': zhCN,
