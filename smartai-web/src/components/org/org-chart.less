@@ -1,0 +1,108 @@
+// 组织架构树：经典 CSS 连线布局
+
+@org-line: var(--sa-color-border, #d9d9d9);
+
+.sa-org {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  transform-origin: top center;
+  transition: transform 0.2s ease;
+
+  &__root {
+    display: flex;
+    justify-content: center;
+  }
+
+  &__node {
+    display: inline-block;
+    padding: 10px 24px;
+    font-size: 14px;
+    color: var(--sa-color-text, #1f2225);
+    white-space: nowrap;
+    cursor: pointer;
+    background: var(--sa-color-bg-container, #fff);
+    border: 1px solid var(--org-line);
+    border-radius: 3px;
+    transition:
+      color 0.2s,
+      border-color 0.2s;
+
+    &:hover {
+      color: var(--sa-color-primary, #415fff);
+      border-color: var(--sa-color-primary, #415fff);
+    }
+
+    &--root {
+      border-color: var(--org-line);
+    }
+  }
+
+  ul {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 20px 0 0;
+    margin: 0;
+    list-style: none;
+
+    // 父节点到子级横线的竖直连接段
+    &::before {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      height: 20px;
+      content: '';
+      border-left: 1px solid @org-line;
+    }
+  }
+
+  li {
+    position: relative;
+    padding: 20px 8px 0;
+    text-align: center;
+    list-style: none;
+
+    // 子节点上方左右两条横线
+    &::before,
+    &::after {
+      position: absolute;
+      top: 0;
+      right: 50%;
+      width: 50%;
+      height: 20px;
+      content: '';
+      border-top: 1px solid @org-line;
+    }
+
+    &::after {
+      right: auto;
+      left: 50%;
+      border-left: 1px solid @org-line;
+    }
+
+    // 多级子节点再次向下连接时，竖线由内层 ul 的 ::before 绘制
+    &:only-child {
+      padding-top: 20px;
+
+      &::before,
+      &::after {
+        display: none;
+      }
+    }
+
+    &:first-child::before,
+    &:last-child::after {
+      border: 0 none;
+    }
+
+    &:last-child::before {
+      border-right: 1px solid @org-line;
+      border-radius: 0 3px 0 0;
+    }
+
+    &:first-child::after {
+      border-radius: 3px 0 0;
+    }
+  }
+}

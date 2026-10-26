@@ -98,7 +98,7 @@ const mockMenus: MenuItem[] = [
         id: '0adfa2c3c4d278aedd88019236c1425e',
         parentId: '374409ab56141b311ccb0f1847dd724a',
         name: '向量库管理',
-        path: 'aigc/embed-store',
+        path: 'embed-store',
         type: 'menu',
         component: '/aigc/embed-store/index',
         perms: 'embed-store',

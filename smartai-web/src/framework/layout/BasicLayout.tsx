@@ -1,6 +1,6 @@
-import { Layout, theme } from 'antd';
+import { Layout, Watermark, theme } from 'antd';
 import type { ReactNode } from 'react';
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { defaultCollapsedWidth, defaultSiderWidth } from '@/framework/config/settings';
 import { AppLogo } from '@/framework/layout/components/AppLogo';
@@ -10,8 +10,9 @@ import { SettingsDrawer } from '@/framework/layout/components/SettingsDrawer';
 import { SideMenu } from '@/framework/layout/components/SideMenu';
 import { TabsBar } from '@/framework/layout/components/TabsBar';
 import { useLayout } from '@/framework/layout/LayoutProvider';
-import { useMenu } from '@/framework/menu/MenuProvider';
+import { useLayoutSider } from '@/framework/layout/useLayoutSider';
 import { useMenuTitle } from '@/framework/menu/useMenuTitle';
+import { useTheme } from '@/framework/theme/ThemeProvider';
 import '@/framework/styles/layout.less';
 
 const { Content, Sider } = Layout;
@@ -26,13 +27,13 @@ export interface BasicLayoutProps {
  * 布局内部不关心业务页面，只负责外壳、菜单与多 Tab。
  */
 export function BasicLayout({ headerActions }: BasicLayoutProps) {
-  const { menuTree, getMenuChain } = useMenu();
   const { settings, logo, addTab, collapsed, setResponsiveCollapsed, refreshToken } = useLayout();
+  const { mode } = useTheme();
+  const { layoutMode, chain, nodes: siderNodes, visible: showSider } = useLayoutSider();
   const getTitle = useMenuTitle();
   const location = useLocation();
   const { token } = theme.useToken();
 
-  const chain = useMemo(() => getMenuChain(location.pathname), [getMenuChain, location.pathname]);
   const current = chain.length > 0 ? chain[chain.length - 1] : undefined;
   const currentTitle = current ? getTitle(current) : '';
 
@@ -43,10 +44,8 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
     document.title = currentTitle ? `${currentTitle} - ${appTitle}` : appTitle;
   }, [current, currentTitle, addTab, logo.title]);
 
-  const isVertical = settings.layoutMode === 'vertical';
-  const isBlend = settings.layoutMode === 'blend';
-  const blendNodes = isBlend && chain[0]?.children.length ? chain[0].children : [];
-  const showSider = isVertical || blendNodes.length > 0;
+  const isVertical = layoutMode === 'vertical';
+  const isBlend = layoutMode === 'blend';
 
   const sider = showSider ? (
     <Sider
@@ -56,7 +55,7 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
       collapsedWidth={defaultCollapsedWidth}
       collapsed={collapsed}
       trigger={null}
-      breakpoint={isVertical ? 'lg' : undefined}
+      breakpoint="lg"
       onBreakpoint={(broken) => setResponsiveCollapsed(broken)}
       style={{
         background: token.colorBgContainer,
@@ -70,7 +69,7 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
           </div>
         ) : null}
         <div className="sa-sider__menu">
-          <SideMenu nodes={isVertical ? menuTree : blendNodes} collapsed={collapsed} />
+          <SideMenu nodes={siderNodes} collapsed={collapsed} />
         </div>
       </div>
     </Sider>
@@ -80,11 +79,20 @@ export function BasicLayout({ headerActions }: BasicLayoutProps) {
 
   const content = (
     <Content className="sa-content">
-      <div className="sa-content__inner">
-        <Suspense key={`${location.pathname}#${refreshToken}`} fallback={<PageLoading />}>
-          <Outlet />
-        </Suspense>
-      </div>
+      <Watermark
+        className="sa-content__watermark"
+        content={logo.title ?? ''}
+        gap={[120, 120]}
+        font={{
+          color: mode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.045)',
+        }}
+      >
+        <div className="sa-content__inner">
+          <Suspense key={`${location.pathname}#${refreshToken}`} fallback={<PageLoading />}>
+            <Outlet />
+          </Suspense>
+        </div>
+      </Watermark>
     </Content>
   );
 

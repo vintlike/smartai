@@ -63,6 +63,16 @@ export function ThemeProvider({
   const [stored, updateSettings] = usePersistentState<ThemeSettings>(storageKey, defaults);
   const settings = useMemo<ThemeSettings>(() => ({ ...defaults, ...stored }), [defaults, stored]);
   const activeToken = themeTokens[settings.mode];
+  /** 业务页面自定义样式所需的文字/填充色，随亮暗模式联动 */
+  const designToken = useMemo(
+    () =>
+      antdTheme.getDesignToken({
+        algorithm:
+          settings.mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+        token: { colorPrimary: settings.colorPrimary },
+      }),
+    [settings.mode, settings.colorPrimary],
+  );
 
   const setMode = useCallback(
     (mode: ThemeMode) => {
@@ -134,13 +144,19 @@ export function ThemeProvider({
     );
     root.style.setProperty('--sa-color-border', activeToken.colorBorder);
     root.style.setProperty('--sa-color-border-secondary', activeToken.colorBorderSecondary);
+    root.style.setProperty('--sa-color-text', designToken.colorText);
+    root.style.setProperty('--sa-color-text-secondary', designToken.colorTextSecondary);
+    root.style.setProperty('--sa-color-text-tertiary', designToken.colorTextTertiary);
+    root.style.setProperty('--sa-color-text-quaternary', designToken.colorTextQuaternary);
+    root.style.setProperty('--sa-color-fill-secondary', designToken.colorFillSecondary);
+    root.style.setProperty('--sa-color-fill-quaternary', designToken.colorFillQuaternary);
 
     const [thumb, track] = resolveScrollbarColors(activeToken.scrollbarColor);
     root.style.setProperty('--sa-scrollbar-thumb', thumb);
     root.style.setProperty('--sa-scrollbar-track', track);
     root.style.setProperty('--sa-scrollbar-width', activeToken.scrollbarWidth ?? 'auto');
     root.style.setProperty('--sa-scrollbar-gutter', activeToken.scrollbarGutter ?? 'auto');
-  }, [settings.mode, settings.colorPrimary, activeToken]);
+  }, [settings.mode, settings.colorPrimary, activeToken, designToken]);
 
   const value = useMemo<ThemeContextValue>(
     () => ({

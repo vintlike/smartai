@@ -1,0 +1,106 @@
+// 主控台
+
+.sa-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  &__chart {
+    padding: 4px 16px 8px;
+
+    .ant-tabs-nav {
+      margin-bottom: 8px;
+    }
+  }
+
+  @media (max-width: 1200px) {
+    &__stats {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    &__stats {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}
+
+.sa-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px 12px;
+  background: var(--sa-color-bg-container, #fff);
+  border-radius: 7px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__title {
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--sa-color-text, #1f2225);
+  }
+
+  &__tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 6px;
+    font-size: 13px;
+    border-radius: 3px;
+  }
+
+  &__tag--success {
+    color: #18a058;
+    background: rgba(24, 160, 88, 0.12);
+  }
+
+  &__tag--processing {
+    color: var(--sa-color-primary, #415fff);
+    background: color-mix(in srgb, var(--sa-color-primary, #415fff) 12%, transparent);
+  }
+
+  &__tag--warning {
+    color: #f0a020;
+    background: rgba(240, 160, 32, 0.15);
+  }
+
+  &__tag--error {
+    color: #d03050;
+    background: rgba(208, 48, 80, 0.1);
+  }
+
+  &__value {
+    font-size: 24px;
+    line-height: 1.3;
+    color: var(--sa-color-text, #333639);
+  }
+
+  &__footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--sa-color-text-secondary, #4b5563);
+  }
+
+  &__trend {
+    font-size: 12px;
+    color: #00d16c;
+  }
+}

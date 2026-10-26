@@ -1,0 +1,168 @@
+// 业务页面通用容器样式
+
+.sa-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 100%;
+  padding: 16px;
+  background: var(--sa-color-bg-container, #fff);
+  border-radius: 7px;
+
+  &--compact {
+    padding: 12px;
+  }
+
+  &--none {
+    padding: 0;
+    gap: 0;
+  }
+}
+
+.sa-panel {
+  background: var(--sa-color-bg-container, #fff);
+  border-radius: 7px;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px 0;
+
+    &--divider {
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--sa-color-border-secondary, #f0f0f0);
+    }
+  }
+
+  &__title {
+    min-width: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--sa-color-text, #1f2225);
+  }
+
+  &__extra {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__body {
+    min-width: 0;
+  }
+}
+
+.sa-page-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  &__main {
+    min-width: 0;
+  }
+
+  &__title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--sa-color-text, #1f2225);
+  }
+
+  &__hint {
+    font-size: 13px;
+    color: var(--sa-color-text-tertiary, #98a2b3);
+    cursor: help;
+  }
+
+  &__desc {
+    margin-top: 6px;
+    font-size: 13px;
+    color: var(--sa-color-text-secondary, #667085);
+  }
+
+  &__extra {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+  }
+}
+
+// 筛选区
+.sa-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  &__fields {
+    display: flex;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px 24px;
+    min-width: 0;
+  }
+
+  &__actions {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+.sa-filter-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  &__label {
+    flex: none;
+    font-size: 14px;
+    color: var(--sa-color-text, #1f2225);
+    white-space: nowrap;
+  }
+
+  &__control {
+    max-width: 100%;
+  }
+}
+
+// 页内区块标题（如「聊天模型列表」）
+.sa-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--sa-color-text, #1f2225);
+}
+
+.sa-text-muted {
+  color: var(--sa-color-text-tertiary, #98a2b3);
+}
+
+// 等宽文本（令牌、秘钥、代码片段）
+.sa-mono {
+  font-family: 'SFMono-Regular', Consolas, Menlo, monospace;
+  font-size: 13px;
+}
+
+// 弹窗内的双列表单，统一由页面容器加载，避免各页重复定义
+.sa-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 16px;
+
+  @media (max-width: 640px) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

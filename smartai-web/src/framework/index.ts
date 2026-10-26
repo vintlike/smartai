@@ -66,6 +66,8 @@ export type {
   TabItem,
 } from '@/framework/layout/LayoutProvider';
 export { LayoutProvider, useLayout } from '@/framework/layout/LayoutProvider';
+export type { LayoutSiderState } from '@/framework/layout/useLayoutSider';
+export { useLayoutSider } from '@/framework/layout/useLayoutSider';
 export { MenuIcon } from '@/framework/menu/MenuIcon';
 // ---------- menu ----------
 export { MenuProvider, useMenu } from '@/framework/menu/MenuProvider';

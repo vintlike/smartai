@@ -34,6 +34,24 @@ export function AppRouter() {
       };
     });
 
+    // 菜单树之外的详情页：由列表页点击进入，路由参数区分具体数据
+    const detailRoutes = [
+      { path: 'app/info/:id', component: '/app/detail' },
+      { path: 'aigc/knowledge/:id', component: '/aigc/knowledge/detail' },
+    ].map(({ path, component }) => {
+      const Page = resolvePageComponent(component);
+      return {
+        path,
+        element: Page ? (
+          <Suspense fallback={<PageLoading />}>
+            <Page />
+          </Suspense>
+        ) : (
+          <MissingPage component={component} />
+        ),
+      };
+    });
+
     return [
       {
         path: '/',
@@ -49,6 +67,7 @@ export function AppRouter() {
               ),
           },
           ...pageRoutes,
+          ...detailRoutes,
           { path: '*', element: <NotFoundPage /> },
         ],
       },
