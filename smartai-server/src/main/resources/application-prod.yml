@@ -1,0 +1,17 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+smartai:
+  security:
+    jwt:
+      secret: ${JWT_SECRET}
+  cors:
+    allowed-origin-patterns: ${CORS_ALLOWED_ORIGIN_PATTERNS}
+
+logging:
+  level:
+    root: warn
+    com.smartai.server: info

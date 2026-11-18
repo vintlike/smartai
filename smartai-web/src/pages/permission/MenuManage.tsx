@@ -11,6 +11,8 @@ import {
   KeyOutlined,
   MenuOutlined,
   MessageOutlined,
+  PartitionOutlined,
+  PictureOutlined,
   PlusOutlined,
   RobotOutlined,
   SafetyOutlined,
@@ -35,13 +37,13 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import type { ReactNode } from 'react';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { menuApi, type SysMenuRecord } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockMenus } from './mockData';
 import type { MenuItem, MenuType } from './types';
 
 const { Text } = Typography;
@@ -71,6 +73,83 @@ const menuTypeMeta: Record<MenuType, { label: string; color: string }> = {
   menu: { label: '菜单', color: 'green' },
   button: { label: '按钮', color: 'orange' },
 };
+
+/** 接口菜单可能使用简写图标 key（与 src/api/menu.ts 的 iconMap 一致） */
+const LEGACY_ICON_MAP: Record<string, ReactNode> = {
+  dashboard: <DashboardOutlined />,
+  appstore: <AppstoreOutlined />,
+  setting: <SettingOutlined />,
+  database: <DatabaseOutlined />,
+  folder: <FolderOpenOutlined />,
+  creditCard: <CreditCardOutlined />,
+  user: <UserOutlined />,
+  key: <KeyOutlined />,
+  comment: <MessageOutlined />,
+  fileText: <FileTextOutlined />,
+  team: <TeamOutlined />,
+  picture: <PictureOutlined />,
+  partition: <PartitionOutlined />,
+};
+
+function resolveIcon(value?: string): ReactNode {
+  if (!value) return undefined;
+  return ICON_MAP[value] ?? LEGACY_ICON_MAP[value];
+}
+
+function toMenuItem(record: SysMenuRecord): MenuItem {
+  const type = String(record.type ?? 'menu');
+  return {
+    id: String(record.id),
+    parentId:
+      record.parentId === null || record.parentId === undefined
+        ? undefined
+        : String(record.parentId),
+    name: String(record.name ?? ''),
+    path: String(record.path ?? ''),
+    menuType:
+      type === 'button' || type === 'btn' ? 'button' : type === 'catalog' ? 'catalog' : 'menu',
+    component: record.component || undefined,
+    icon: record.icon || undefined,
+    order: Number(record.orderNo ?? 0),
+    perms: record.perms || undefined,
+    status: Number(record.isDisabled ?? 0) === 1 ? 0 : 1,
+    external: Number(record.isExt ?? 0) === 1,
+    keepalive: Number(record.isKeepalive ?? 0) === 1,
+  };
+}
+
+/** 接口返回扁平菜单，前端按 parentId 组装成树并按排序号排列 */
+function buildMenuTree(list: SysMenuRecord[]): MenuItem[] {
+  const nodes = new Map<string, MenuItem>();
+  list.forEach((record) => {
+    nodes.set(String(record.id), toMenuItem(record));
+  });
+
+  const roots: MenuItem[] = [];
+  list.forEach((record) => {
+    const node = nodes.get(String(record.id));
+    if (!node) return;
+    const parent = node.parentId ? nodes.get(node.parentId) : undefined;
+    if (parent) {
+      parent.children = [...(parent.children ?? []), node];
+    } else {
+      roots.push(node);
+    }
+  });
+
+  const sortTree = (items: MenuItem[]) => {
+    items.sort((a, b) => a.order - b.order);
+    items.forEach((item) => {
+      if (item.children) sortTree(item.children);
+    });
+  };
+  sortTree(roots);
+  return roots;
+}
+
+function errorText(error: unknown): string {
+  return error instanceof Error ? error.message : '操作失败';
+}
 
 /** 图标选择器：弹出网格选图标，作为 Form.Item 受控字段使用（value/onChange 由表单注入） */
 function IconPicker({
@@ -159,10 +238,6 @@ interface MenuTreeSelectNode {
   children?: MenuTreeSelectNode[];
 }
 
-function flattenTree(nodes: MenuItem[]): MenuItem[] {
-  return nodes.flatMap((node) => [node, ...(node.children ? flattenTree(node.children) : [])]);
-}
-
 function toTreeSelectData(nodes: MenuItem[]): MenuTreeSelectNode[] {
   return nodes.map((node) => ({
     title: node.name,
@@ -170,34 +245,6 @@ function toTreeSelectData(nodes: MenuItem[]): MenuTreeSelectNode[] {
     disabled: node.menuType === 'button',
     children: node.children ? toTreeSelectData(node.children) : undefined,
   }));
-}
-
-function addChildToTree(nodes: MenuItem[], parentId: string, child: MenuItem): MenuItem[] {
-  return nodes.map((node) => {
-    if (node.id === parentId) {
-      return { ...node, children: [...(node.children ?? []), child] };
-    }
-    if (node.children) {
-      return { ...node, children: addChildToTree(node.children, parentId, child) };
-    }
-    return node;
-  });
-}
-
-function updateTree(nodes: MenuItem[], id: string, payload: Partial<MenuItem>): MenuItem[] {
-  return nodes.map((node) => {
-    if (node.id === id) return { ...node, ...payload };
-    if (node.children) return { ...node, children: updateTree(node.children, id, payload) };
-    return node;
-  });
-}
-
-function removeFromTree(nodes: MenuItem[], id: string): MenuItem[] {
-  return nodes
-    .filter((node) => node.id !== id)
-    .map((node) =>
-      node.children ? { ...node, children: removeFromTree(node.children, id) } : node,
-    );
 }
 
 /** 单节点是否命中搜索条件 */
@@ -228,27 +275,45 @@ function filterMenuTree(nodes: MenuItem[], query: QueryParams): MenuItem[] {
 
 export default function MenuManage() {
   const { message } = App.useApp();
-  const [menus, setMenus] = useState<MenuItem[]>(mockMenus);
+  const [menus, setMenus] = useState<MenuItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<MenuItem | null>(null);
   const [form] = Form.useForm<MenuFormValues>();
   const menuType = Form.useWatch('menuType', form);
   const external = Form.useWatch('external', form);
   const [query, setQuery] = useState<QueryParams>({});
-  const [page, setPageState] = useState(1);
-  const [pageSize, setPageSizeState] = useState(10);
+
+  const loadMenus = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await menuApi.list({ page: 1, pageSize: 999 });
+      setMenus(buildMenuTree(data.list));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const reload = useCallback(async () => {
+    try {
+      await loadMenus();
+    } catch (error) {
+      message.error(errorText(error));
+    }
+  }, [loadMenus, message]);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const filteredMenus = useMemo(() => filterMenuTree(menus, query), [menus, query]);
-  const flatMenus = flattenTree(filteredMenus);
 
   const handleSearch = (values: QueryParams) => {
     setQuery(values);
-    setPageState(1);
   };
 
   const handleResetSearch = () => {
     setQuery({});
-    setPageState(1);
   };
 
   const openCreate = () => {
@@ -300,32 +365,33 @@ export default function MenuManage() {
   const handleOk = async () => {
     const values = await form.validateFields();
     const payload = {
-      parentId: values.parentId === '__root__' ? undefined : values.parentId,
-      menuType: values.menuType,
       name: values.name,
+      /* 空串表示顶级菜单，与后端 storeParent 的空值语义一致 */
+      parentId: values.parentId ?? '',
       path: values.path,
-      component: values.component,
-      icon: values.icon,
-      order: values.order,
       perms: values.perms,
-      status: (values.status ? 1 : 0) as 0 | 1,
-      external: Boolean(values.external),
-      keepalive: Boolean(values.keepalive),
+      type: values.menuType,
+      orderNo: values.order,
+      icon: values.icon,
+      component: values.component,
+      isDisabled: values.status ? 0 : 1,
+      isExt: values.external ? 1 : 0,
+      isKeepalive: values.keepalive ? 1 : 0,
     };
-    if (editing) {
-      setMenus((prev) => updateTree(prev, editing.id, payload));
-      message.success('编辑成功');
-    } else {
-      const newMenu: MenuItem = { id: `m-${Date.now()}`, ...payload };
-      if (payload.parentId) {
-        setMenus((prev) => addChildToTree(prev, payload.parentId as string, newMenu));
+    try {
+      if (editing) {
+        await menuApi.update(editing.id, payload);
+        message.success('编辑成功');
       } else {
-        setMenus((prev) => [...prev, newMenu]);
+        await menuApi.create(payload);
+        message.success('新增菜单成功');
       }
-      message.success('新增菜单成功');
+      setModalOpen(false);
+      setEditing(null);
+      await reload();
+    } catch (error) {
+      message.error(errorText(error));
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
   const columns: ColumnsType<MenuItem> = [
@@ -355,7 +421,7 @@ export default function MenuManage() {
       dataIndex: 'icon',
       width: 80,
       align: 'center',
-      render: (value?: string) => (value ? (ICON_MAP[value] ?? '-') : '-'),
+      render: (value?: string) => resolveIcon(value) ?? '-',
     },
     { title: '排序', dataIndex: 'order', width: 70, align: 'center' },
     {
@@ -394,14 +460,19 @@ export default function MenuManage() {
             title="确认删除"
             description={
               record.children && record.children.length > 0
-                ? `该菜单下存在子菜单，删除后子菜单将一并删除，确定删除「${record.name}」吗？`
+                ? '该菜单下存在子菜单，请先删除子菜单后再试'
                 : `确定删除「${record.name}」吗？`
             }
             okText="删除"
             cancelText="取消"
-            onConfirm={() => {
-              setMenus((prev) => removeFromTree(prev, record.id));
-              message.success('删除成功');
+            onConfirm={async () => {
+              try {
+                await menuApi.delete(record.id);
+                message.success('删除成功');
+                await reload();
+              } catch (error) {
+                message.error(errorText(error));
+              }
             }}
           >
             <Button type="link" size="small" danger>
@@ -413,11 +484,7 @@ export default function MenuManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<MenuItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<MenuItem>(columns, reload);
 
   return (
     <PageContainer
@@ -462,17 +529,10 @@ export default function MenuManage() {
           bordered
           state={toolbar}
           dataSource={filteredMenus}
+          loading={loading}
           expandable={{ defaultExpandAllRows: true }}
           scroll={{ x: 1400 }}
-          pagination={{
-            current: page,
-            pageSize,
-            total: flatMenus.length,
-            onChange: (nextPage, nextPageSize) => {
-              setPageState(nextPage);
-              setPageSizeState(nextPageSize);
-            },
-          }}
+          pagination={false}
         />
       </div>
       <Modal

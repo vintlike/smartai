@@ -9,6 +9,8 @@ const METHODS_WITH_BODY = new Set(['POST', 'PUT', 'PATCH']);
 export interface MockPluginOptions {
   /** 模拟网络延迟，默认 80ms，传 0 关闭 */
   delay?: number;
+  /** 命中这些路径前缀时跳过 mock，交给 Vite proxy 访问真实后端 */
+  exclude?: string[];
 }
 
 function matchRoute(
@@ -71,6 +73,7 @@ function send(res: ServerResponse, status: number, payload: MockResult): void {
  */
 export default function createMockPlugin(options: MockPluginOptions = {}): Plugin {
   const delay = options.delay ?? 80;
+  const exclude = options.exclude ?? [];
 
   return {
     name: 'smartai:mock',
@@ -86,6 +89,10 @@ export default function createMockPlugin(options: MockPluginOptions = {}): Plugi
         }
 
         const [pathname, search = ''] = url.split('?');
+        if (exclude.some((prefix) => pathname.startsWith(prefix))) {
+          next();
+          return;
+        }
         const method = (req.method ?? 'GET').toUpperCase();
         const matched = matchRoute(method, pathname);
         if (!matched) {

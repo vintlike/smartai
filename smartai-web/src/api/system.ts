@@ -30,6 +30,23 @@ export interface SysLogRecord {
   [key: string]: unknown;
 }
 
+/** 菜单记录：字段命名对齐后端 MenuVO（orderNo / isExt / isShow） */
+export interface SysMenuRecord {
+  id: number | string;
+  name: string;
+  parentId?: number | string | null;
+  path?: string;
+  perms?: string;
+  type: string;
+  orderNo?: number;
+  icon?: string;
+  component?: string;
+  isDisabled?: number;
+  isExt?: number;
+  isKeepalive?: number;
+  isShow?: number;
+}
+
 /** 标准 CRUD 五件套：由资源根路径生成，列表统一走分页查询 */
 function createSystemApi<T extends { id: number | string }>(base: string) {
   return {
@@ -58,11 +75,11 @@ export const roleApi = {
 
 /** 菜单管理：CRUD + 按角色/用户查授权菜单 */
 export const menuApi = {
-  ...createSystemApi<SysRoleRecord>('/api/sys/menu'),
+  ...createSystemApi<SysMenuRecord>('/api/sys/menu'),
   listByRoleId: (roleId: number | string) =>
-    request<PageResult<SysRoleRecord>>(`/api/sys/menu/role/${roleId}`),
+    request<PageResult<SysMenuRecord>>(`/api/sys/menu/role/${roleId}`),
   listByUserId: (userId: number | string) =>
-    request<PageResult<SysRoleRecord>>(`/api/sys/menu/user/${userId}`),
+    request<PageResult<SysMenuRecord>>(`/api/sys/menu/user/${userId}`),
 };
 
 /** 部门管理：标准 CRUD（树形数据由页面自行组装） */
