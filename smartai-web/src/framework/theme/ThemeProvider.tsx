@@ -1,190 +1,168 @@
-import type { ThemeConfig } from 'antd';
 import { theme as antdTheme, ConfigProvider } from 'antd';
-import type { Locale } from 'antd/es/locale';
 import enUS from 'antd/locale/en_US';
 import zhCN from 'antd/locale/zh_CN';
-import type { ReactNode } from 'react';
-import { createContext, useCallback, useContext, useEffect, useMemo } from 'react';
-import type { ThemeSettings } from '@/framework/config/settings';
 import {
-  defaultHeaderHeight,
-  defaultStorageKeys,
-  defaultThemeSettings,
-} from '@/framework/config/settings';
-import type { ThemeMode, ThemeToken } from '@/framework/config/theme';
-import { themeTokens } from '@/framework/config/theme';
-import { useI18n } from '@/framework/i18n/I18nProvider';
-import { usePersistentState } from '@/framework/utils/usePersistentState';
-
-const antdLocales: Record<string, Locale> = {
-  'zh-CN': zhCN,
-  'en-US': enUS,
-};
-
-/** 将 `滑块颜色 轨道颜色` 拆分为两段，只传一个颜色时轨道透明 */
-function resolveScrollbarColors(scrollbarColor: string): [string, string] {
-  const [thumb, track] = scrollbarColor.trim().split(/\s+/);
-  return [thumb ?? 'transparent', track ?? 'transparent'];
-}
-
-export interface ThemeProviderProps {
-  children: ReactNode;
-  /** 覆盖默认主题设置 */
-  defaultSettings?: Partial<ThemeSettings>;
-  storageKey?: string;
-  onThemeChange?: (settings: ThemeSettings) => void;
-}
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useI18n } from '../i18n/I18nProvider';
+import type { ThemeMode } from '../types';
+import { colorPrimary as defaultColorPrimary, uiColors } from './colors';
+import { darkThemeTokens, lightThemeTokens } from './tokens';
 
 export interface ThemeContextValue {
-  settings: ThemeSettings;
-  mode: ThemeMode;
-  colorPrimary: string;
-  /** 当前主题对应的设计 Token */
-  themeToken: ThemeToken;
-  setMode: (mode: ThemeMode) => void;
-  setColorPrimary: (color: string) => void;
-  toggleMode: () => void;
-  reset: () => void;
+  /** 当前主题模式 */
+  themeMode: ThemeMode;
+  /** 是否为深色模式 */
+  isDark: boolean;
+  /** 设置主题模式（持久化到本地存储） */
+  setThemeMode: (mode: ThemeMode) => void;
+  /** 切换浅色/深色 */
+  toggleTheme: () => void;
+  /** 当前主题色 */
+  themeColor: string;
+  /** 设置主题色（持久化到本地存储） */
+  setThemeColor: (color: string) => void;
+  /** 灰色模式（整站灰度滤镜，不持久化） */
+  greyMode: boolean;
+  /** 设置灰色模式 */
+  setGreyMode: (enabled: boolean) => void;
+  /** 色弱模式（整站反色滤镜，不持久化） */
+  weakMode: boolean;
+  /** 设置色弱模式 */
+  setWeakMode: (enabled: boolean) => void;
 }
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
+/** 读取本地存储的主题偏好 */
+function readStoredMode(storageKey: string): ThemeMode | null {
+  if (typeof window === 'undefined') return null;
+  const stored = window.localStorage.getItem(`${storageKey}-theme`);
+  return stored === 'dark' || stored === 'light' ? stored : null;
+}
+
+/** 读取本地存储的主题色偏好 */
+function readStoredColor(storageKey: string): string | null {
+  if (typeof window === 'undefined') return null;
+  return window.localStorage.getItem(`${storageKey}-color`);
+}
+
+export interface ThemeProviderProps {
+  children: ReactNode;
+  /** 默认主题，本地无偏好时生效 */
+  defaultMode?: ThemeMode;
+  /** 默认主题色，本地无偏好时生效 */
+  colorPrimary?: string;
+  /** 本地存储 key */
+  storageKey?: string;
+}
+
+/**
+ * 主题提供者：管理浅色/深色主题并注入 antd ConfigProvider。
+ * 与业务完全无关，任何项目均可直接复用。
+ */
 export function ThemeProvider({
   children,
-  defaultSettings,
-  storageKey = defaultStorageKeys.theme,
-  onThemeChange,
+  defaultMode = 'light',
+  colorPrimary = defaultColorPrimary,
+  storageKey = 'smartai-web',
 }: ThemeProviderProps) {
-  const { locale } = useI18n();
-  const defaults = useMemo<ThemeSettings>(
-    () => ({ ...defaultThemeSettings, ...defaultSettings }),
-    [defaultSettings],
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(
+    () => readStoredMode(storageKey) ?? defaultMode,
   );
-  const [stored, updateSettings] = usePersistentState<ThemeSettings>(storageKey, defaults);
-  const settings = useMemo<ThemeSettings>(() => ({ ...defaults, ...stored }), [defaults, stored]);
-  const activeToken = themeTokens[settings.mode];
-  /** 业务页面自定义样式所需的文字/填充色，随亮暗模式联动 */
-  const designToken = useMemo(
-    () =>
-      antdTheme.getDesignToken({
-        algorithm:
-          settings.mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-        token: { colorPrimary: settings.colorPrimary },
-      }),
-    [settings.mode, settings.colorPrimary],
+  const [themeColor, setThemeColorState] = useState<string>(
+    () => readStoredColor(storageKey) ?? colorPrimary,
   );
+  const [greyMode, setGreyMode] = useState(false);
+  const [weakMode, setWeakMode] = useState(false);
 
-  const setMode = useCallback(
+  const setThemeMode = useCallback(
     (mode: ThemeMode) => {
-      updateSettings({ mode });
-      onThemeChange?.({ ...settings, mode });
+      setThemeModeState(mode);
+      window.localStorage.setItem(`${storageKey}-theme`, mode);
     },
-    [updateSettings, onThemeChange, settings],
+    [storageKey],
   );
 
-  const setColorPrimary = useCallback(
-    (colorPrimary: string) => {
-      updateSettings({ colorPrimary });
-      onThemeChange?.({ ...settings, colorPrimary });
+  const toggleTheme = useCallback(() => {
+    setThemeMode(themeMode === 'dark' ? 'light' : 'dark');
+  }, [themeMode, setThemeMode]);
+
+  const setThemeColor = useCallback(
+    (color: string) => {
+      setThemeColorState(color);
+      window.localStorage.setItem(`${storageKey}-color`, color);
     },
-    [updateSettings, onThemeChange, settings],
+    [storageKey],
   );
 
-  const toggleMode = useCallback(() => {
-    setMode(settings.mode === 'dark' ? 'light' : 'dark');
-  }, [setMode, settings.mode]);
+  const isDark = themeMode === 'dark';
+  /** antd 组件内置文案跟随界面语言 */
+  const { locale } = useI18n();
 
-  const reset = useCallback(() => {
-    updateSettings(defaults);
-    onThemeChange?.(defaults);
-  }, [updateSettings, defaults, onThemeChange]);
-
-  const themeConfig = useMemo<ThemeConfig>(
-    () => ({
-      algorithm: settings.mode === 'dark' ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-      token: {
-        colorPrimary: settings.colorPrimary,
-        colorInfo: settings.colorPrimary,
-        colorLink: settings.colorPrimary,
-        borderRadius: 8,
-        fontFamily:
-          "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif",
-        colorBgLayout: activeToken.colorBgLayout,
-        colorBgContainer: activeToken.colorBgContainer,
-        colorBgElevated: activeToken.colorBgElevated ?? activeToken.colorBgContainer,
-        colorBorder: activeToken.colorBorder,
-        colorBorderSecondary: activeToken.colorBorderSecondary,
-        colorSplit: activeToken.colorSplit,
-      },
-      components: {
-        Layout: {
-          headerHeight: defaultHeaderHeight,
-          headerPadding: '0 16px',
-        },
-        // 暗色下 colorBgLayout 与 colorBgElevated 同为 #010e1a，选中块需用容器色才能辨识
-        Segmented: {
-          trackBg: activeToken.colorBgLayout,
-          itemSelectedBg: activeToken.colorBgContainer,
-        },
-      },
-    }),
-    [settings.mode, settings.colorPrimary, activeToken],
-  );
-
+  /** 同步 data-theme 到 html，便于自定义样式按主题取值 */
   useEffect(() => {
-    const root = document.documentElement;
-    root.dataset.theme = settings.mode;
-    root.style.colorScheme = settings.mode;
-    root.style.setProperty('--sa-color-primary', settings.colorPrimary);
-    root.style.setProperty('--sa-color-bg-layout', activeToken.colorBgLayout);
-    root.style.setProperty('--sa-color-bg-container', activeToken.colorBgContainer);
-    root.style.setProperty(
-      '--sa-color-bg-elevated',
-      activeToken.colorBgElevated ?? activeToken.colorBgContainer,
-    );
-    root.style.setProperty('--sa-color-border', activeToken.colorBorder);
-    root.style.setProperty('--sa-color-border-secondary', activeToken.colorBorderSecondary);
-    root.style.setProperty('--sa-color-text', designToken.colorText);
-    root.style.setProperty('--sa-color-text-secondary', designToken.colorTextSecondary);
-    root.style.setProperty('--sa-color-text-tertiary', designToken.colorTextTertiary);
-    root.style.setProperty('--sa-color-text-quaternary', designToken.colorTextQuaternary);
-    root.style.setProperty('--sa-color-fill-secondary', designToken.colorFillSecondary);
-    root.style.setProperty('--sa-color-fill-quaternary', designToken.colorFillQuaternary);
+    document.documentElement.dataset.theme = themeMode;
+  }, [themeMode]);
 
-    const [thumb, track] = resolveScrollbarColors(activeToken.scrollbarColor);
-    root.style.setProperty('--sa-scrollbar-thumb', thumb);
-    root.style.setProperty('--sa-scrollbar-track', track);
-    root.style.setProperty('--sa-scrollbar-width', activeToken.scrollbarWidth ?? 'auto');
-    root.style.setProperty('--sa-scrollbar-gutter', activeToken.scrollbarGutter ?? 'auto');
-  }, [settings.mode, settings.colorPrimary, activeToken, designToken]);
+  /** 灰色 / 色弱模式：以 html class 承载整站滤镜（样式见 layout/styles.less） */
+  useEffect(() => {
+    document.documentElement.classList.toggle('app-grey', greyMode);
+  }, [greyMode]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('app-weakness', weakMode);
+  }, [weakMode]);
 
-  const value = useMemo<ThemeContextValue>(
+  const contextValue = useMemo<ThemeContextValue>(
     () => ({
-      settings,
-      mode: settings.mode,
-      colorPrimary: settings.colorPrimary,
-      themeToken: activeToken,
-      setMode,
-      setColorPrimary,
-      toggleMode,
-      reset,
+      themeMode,
+      isDark,
+      setThemeMode,
+      toggleTheme,
+      themeColor,
+      setThemeColor,
+      greyMode,
+      setGreyMode,
+      weakMode,
+      setWeakMode,
     }),
-    [settings, activeToken, setMode, setColorPrimary, toggleMode, reset],
+    [themeMode, isDark, setThemeMode, toggleTheme, themeColor, setThemeColor, greyMode, weakMode],
   );
 
   return (
-    <ThemeContext.Provider value={value}>
-      <ConfigProvider theme={themeConfig} locale={antdLocales[locale] ?? zhCN}>
+    <ThemeContext.Provider value={contextValue}>
+      <ConfigProvider
+        locale={locale === 'en-US' ? enUS : zhCN}
+        theme={{
+          algorithm: isDark ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+          token: {
+            colorPrimary: themeColor,
+            /** 链接色跟随主题色 */
+            colorLink: themeColor,
+            /** 功能色（设计规范色卡） */
+            ...uiColors,
+            /** 亮/暗主题专属 Token */
+            ...(isDark ? darkThemeTokens : lightThemeTokens),
+          },
+        }}
+      >
         {children}
       </ConfigProvider>
     </ThemeContext.Provider>
   );
 }
 
-export function useTheme(): ThemeContextValue {
+/** 获取主题上下文（必须在 ThemeProvider 内使用） */
+export function useThemeMode(): ThemeContextValue {
   const context = useContext(ThemeContext);
   if (!context) {
-    throw new Error('useTheme 必须在 <ThemeProvider> 内部使用');
+    throw new Error('useThemeMode 必须在 ThemeProvider 内使用');
   }
   return context;
 }

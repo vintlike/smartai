@@ -1,28 +1,36 @@
-import { App as AntdApp } from 'antd';
-import { BrowserRouter } from 'react-router-dom';
-import { I18nProvider, LayoutProvider, MenuProvider, ThemeProvider } from '@/framework';
-import { AppRouter } from '@/router/AppRouter';
-import { fetchMenuList } from '@/services/menu';
+import { useEffect } from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { AuthProvider } from '@/auth/AuthProvider';
+import router from '@/router';
+
+/** 全局事件委托：Table 表头文字被省略时，hover 自动补 title 展示全文 */
+function useTableHeadTitle() {
+  useEffect(() => {
+    const handleMouseOver = (event: MouseEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      const cell = target.closest('.ant-table-thead th');
+      if (!(cell instanceof HTMLElement)) return;
+      if (cell.scrollWidth > cell.clientWidth) {
+        cell.setAttribute('title', cell.textContent ?? '');
+      }
+    };
+
+    document.addEventListener('mouseover', handleMouseOver);
+    return () => document.removeEventListener('mouseover', handleMouseOver);
+  }, []);
+}
 
 /**
- * 应用装配：Provider 的顺序即框架能力边界。
- * 业务层只需要提供菜单请求方法与页面组件。
- * AntdApp 提供带主题上下文的 message / modal（静态方法不继承 ConfigProvider）。
+ * 应用入口：全部布局与主题能力由路由中的 <AuthLayout />（内部渲染 <AppLayout />）提供，
+ * 此处只挂载鉴权与路由，无需感知任何布局细节。
  */
 export default function App() {
+  useTableHeadTitle();
+
   return (
-    <BrowserRouter>
-      <I18nProvider>
-        <ThemeProvider>
-          <AntdApp>
-            <MenuProvider request={fetchMenuList}>
-              <LayoutProvider>
-                <AppRouter />
-              </LayoutProvider>
-            </MenuProvider>
-          </AntdApp>
-        </ThemeProvider>
-      </I18nProvider>
-    </BrowserRouter>
+    <AuthProvider>
+      <RouterProvider router={router} />
+    </AuthProvider>
   );
 }

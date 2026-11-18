@@ -1,40 +1,37 @@
-import type { MouseEvent } from 'react';
+import { theme } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { BrandMark } from '@/framework/layout/components/BrandMark';
-import { useLayout } from '@/framework/layout/LayoutProvider';
+import { useLayout } from '../AppLayoutProvider';
 
 export interface AppLogoProps {
+  /** 是否折叠态（侧边栏收起时仅展示 Logo） */
   collapsed?: boolean;
-  className?: string;
 }
 
-/** 通用 Logo：图片/图标、标题、跳转地址均来自配置 */
-export function AppLogo({ collapsed = false, className }: AppLogoProps) {
-  const { logo } = useLayout();
+/**
+ * Logo + 标题：位置由所在容器决定（侧边栏顶部 / 顶栏左侧）。
+ * 未显式传入 collapsed 时跟随布局的折叠状态；点击跳转到 homePath。
+ */
+export function AppLogo({ collapsed }: AppLogoProps) {
+  const { config, collapsed: layoutCollapsed } = useLayout();
   const navigate = useNavigate();
-  const { src, icon, title = '', showTitle, showTitleWhenCollapsed, href = '/' } = logo;
-  const visible = showTitle !== false && (!collapsed || showTitleWhenCollapsed === true);
+  const { token } = theme.useToken();
 
-  const handleClick = (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    if (/^https?:\/\//.test(href)) {
-      window.open(href, '_blank', 'noopener,noreferrer');
-      return;
-    }
-    navigate(href);
-  };
+  const isCollapsed = collapsed ?? layoutCollapsed;
+  const logo = isCollapsed ? (config.collapsedLogo ?? config.logo) : config.logo;
 
   return (
-    <a
-      className={['sa-logo', className].filter(Boolean).join(' ')}
-      href={href}
-      onClick={handleClick}
-      aria-label={title}
+    <button
+      type="button"
+      className={`app-layout-logo${isCollapsed ? ' is-collapsed' : ''}`}
+      title={typeof config.title === 'string' ? config.title : undefined}
+      onClick={() => navigate(config.homePath ?? '/')}
     >
-      <span className="sa-logo__icon">
-        {icon ?? (src ? <img src={src} alt={title} width={28} height={28} /> : <BrandMark />)}
-      </span>
-      {visible ? <span className="sa-logo__title">{title}</span> : null}
-    </a>
+      <span className="app-layout-logo-img">{logo}</span>
+      {!isCollapsed && config.title && (
+        <span className="app-layout-logo-title" style={{ color: token.colorText }}>
+          {config.title}
+        </span>
+      )}
+    </button>
   );
 }

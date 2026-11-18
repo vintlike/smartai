@@ -1,30 +1,15 @@
-import { Button, Result, Spin } from 'antd';
-import { useI18n } from '@/framework/i18n/I18nProvider';
+import { Button } from 'antd';
+import { useI18n } from '../../i18n/I18nProvider';
 
-export function MenuLoadingScreen() {
+/** 菜单加载失败（侧边栏 / 顶栏使用）：保持布局紧凑并提供重试 */
+export function MenuErrorInline({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
   const { t } = useI18n();
   return (
-    <div className="sa-state-screen">
-      <Spin size="large" />
-      <p>{t('layout.menu.loading')}</p>
-    </div>
-  );
-}
-
-export function MenuErrorScreen({ error, onRetry }: { error: Error | null; onRetry: () => void }) {
-  const { t } = useI18n();
-  return (
-    <div className="sa-state-screen">
-      <Result
-        status="warning"
-        title={t('layout.menu.error')}
-        subTitle={error?.message}
-        extra={
-          <Button type="primary" onClick={onRetry}>
-            {t('layout.menu.retry')}
-          </Button>
-        }
-      />
+    <div className="app-layout-menu-error" title={error?.message}>
+      <span>{t('menu.error')}</span>
+      <Button type="link" size="small" onClick={onRetry}>
+        {t('menu.retry')}
+      </Button>
     </div>
   );
 }

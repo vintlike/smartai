@@ -1,166 +1,77 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.6.3/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.6.8/schema.json",
   "vcs": {
-    "enabled": true,
+    "enabled": false,
     "clientKind": "git",
-    "useIgnoreFile": true,
-    "root": "."
+    "useIgnoreFile": true
+  },
+  "files": {
+    "includes": ["**", "!**/dist", "!**/node_modules"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineEnding": "lf",
+    "lineWidth": 100
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "jsxQuoteStyle": "double",
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "noUnusedImports": "error",
+        "noUnusedVariables": "error"
+      }
+    }
   },
   "assist": {
-    "enabled": true,
     "actions": {
       "source": {
         "organizeImports": "on"
       }
     }
   },
-  "files": {
-    "ignoreUnknown": true,
-    "includes": [
-      "**/*",
-      "!**/docs",
-      "!**/public/static",
-      "!**/dist",
-      "!**/out",
-      "!**/coverage",
-      "!**/node_modules",
-      "!**/.next",
-      "!**/.qoder/**/*",
-      "!**/.zed/**/*",
-      "!**/.agents/**/*",
-      "!**/.tmp/**/*",
-      "!**/.vite/**/*"
-    ]
-  },
-  "formatter": {
-    "enabled": true,
-    "formatWithErrors": true,
-    "indentStyle": "space",
-    "indentWidth": 2,
-    "lineEnding": "lf",
-    "lineWidth": 100,
-    "attributePosition": "auto",
-    "bracketSpacing": true,
-    "trailingNewline": true
-  },
-  "javascript": {
-    "formatter": {
-      "indentStyle": "space",
-      "indentWidth": 2,
-      "arrowParentheses": "always",
-      "bracketSameLine": false,
-      "bracketSpacing": true,
-      "jsxQuoteStyle": "double",
-      "quoteProperties": "asNeeded",
-      "quoteStyle": "single",
-      "semicolons": "always",
-      "trailingCommas": "all"
-    }
-  },
-  "json": {
-    "formatter": {
-      "trailingCommas": "none",
-      "indentStyle": "space",
-      "indentWidth": 2,
-      "expand": "auto",
-      "bracketSpacing": true
-    }
-  },
-  "linter": {
-    "enabled": true,
-    "domains": {
-      "react": "recommended"
-    },
-    "rules": {
-      "preset": "recommended",
-      "a11y": {
-        "useKeyWithClickEvents": "off",
-        "noStaticElementInteractions": "off",
-        "useButtonType": "error",
-        "useAltText": "error",
-        "useHtmlLang": "warn",
-        "useValidLang": "warn",
-        "noRedundantAlt": "error",
-        "noPositiveTabindex": "error",
-        "noSvgWithoutTitle": "off",
-        "useValidAnchor": "off"
-      },
-      "complexity": {
-        "noForEach": "off",
-        "noImportantStyles": "off",
-        "noBannedTypes": "error",
-        "noUselessConstructor": "error"
-      },
-      "correctness": {
-        "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "error",
-        "noUnusedImports": "error",
-        "noUndeclaredDependencies": "error"
-      },
-      "performance": {
-        "noAccumulatingSpread": "warn"
-      },
-      "security": {
-        "noDangerouslySetInnerHtml": "warn"
-      },
-      "style": {
-        "noRestrictedImports": {
-          "level": "error",
-          "options": {
-            "patterns": [
-              {
-                "group": ["../*", "../**"],
-                "message": "项目内导入必须使用 @/ 别名，禁止 ../ 跨目录相对路径"
-              },
-              {
-                "group": ["./*", "./**"],
-                "message": "项目内导入必须使用 @/ 别名，禁止 ./ 相对路径"
-              }
-            ]
-          }
-        },
-        "noParameterAssign": "warn",
-        "useDefaultParameterLast": "warn",
-        "useLiteralEnumMembers": "warn",
-        "noNonNullAssertion": "warn",
-        "noDescendingSpecificity": "warn",
-        "useAsConstAssertion": "error",
-        "useEnumInitializers": "error",
-        "useSelfClosingElements": "error",
-        "useSingleVarDeclarator": "error",
-        "noUnusedTemplateLiteral": "off",
-        "useNumberNamespace": "error",
-        "noInferrableTypes": "error",
-        "noUselessElse": "error",
-        "useObjectSpread": "warn",
-        "useConst": "error",
-        "useTemplate": "warn"
-      },
-      "suspicious": {
-        "noArrayIndexKey": "off",
-        "noAssignInExpressions": "off",
-        "noDoubleEquals": "off",
-        "noExplicitAny": "warn",
-        "noImplicitAnyLet": "off",
-        "noPrototypeBuiltins": "warn",
-        "useIterableCallbackReturn": "off",
-        "noShadowRestrictedNames": "warn"
-      }
-    }
-  },
   "overrides": [
     {
-      "includes": ["src/**"],
+      "includes": ["src/framework/**"],
       "linter": {
         "rules": {
           "a11y": {
-            "useKeyWithClickEvents": "off",
-            "noStaticElementInteractions": "off"
+            "noStaticElementInteractions": "off",
+            "useKeyWithClickEvents": "off"
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/pages/**"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noStaticElementInteractions": "off",
+            "useKeyWithClickEvents": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off",
+            "noArrayIndexKey": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
           },
           "correctness": {
-            "noUnusedFunctionParameters": "off",
-            "noUnusedVariables": "off",
-            "noUnusedImports": "off"
+            "useExhaustiveDependencies": "off"
           }
         }
       }

@@ -1,0 +1,120 @@
+/* 组织架构图：经典 CSS 连线布局 */
+
+@org-line: var(--app-color-border);
+
+.app-org-chart-scroll {
+  overflow: auto;
+}
+
+/* 宽度贴合内容：内容不足一屏时居中，超宽时从左侧正常滚动 */
+.app-org-chart {
+  width: fit-content;
+  margin: 0 auto;
+}
+
+.app-org-chart__roots {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+}
+
+.app-org-chart__tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.app-org-node {
+  display: inline-block;
+  max-width: 180px;
+  padding: 10px 24px;
+  overflow: hidden;
+  color: var(--app-color-text);
+  font-size: 14px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  background: var(--app-color-bg-container);
+  border: 1px solid @org-line;
+  border-radius: 6px;
+  transition:
+    color 0.2s,
+    border-color 0.2s;
+
+  &:hover {
+    color: var(--app-color-primary);
+    border-color: var(--app-color-primary);
+  }
+
+  &.is-selected {
+    color: var(--app-color-primary);
+    border-color: var(--app-color-primary);
+  }
+}
+
+.app-org-chart ul {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0 0;
+  margin: 0;
+  list-style: none;
+
+  /* 父节点到子级横线的竖直连接段 */
+  &::before {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 20px;
+    content: '';
+    border-left: 1px solid @org-line;
+  }
+}
+
+.app-org-chart li {
+  position: relative;
+  padding: 20px 8px 0;
+  text-align: center;
+  list-style: none;
+
+  /* 子节点上方左右两条横线 */
+  &::before,
+  &::after {
+    position: absolute;
+    top: 0;
+    right: 50%;
+    width: 50%;
+    height: 20px;
+    content: '';
+    border-top: 1px solid @org-line;
+  }
+
+  &::after {
+    right: auto;
+    left: 50%;
+    border-left: 1px solid @org-line;
+  }
+
+  &:only-child {
+    padding-top: 20px;
+
+    &::before,
+    &::after {
+      display: none;
+    }
+  }
+
+  &:first-child::before,
+  &:last-child::after {
+    border: 0 none;
+  }
+
+  &:last-child::before {
+    border-right: 1px solid @org-line;
+    border-radius: 0 6px 0 0;
+  }
+
+  &:first-child::after {
+    border-radius: 6px 0 0;
+  }
+}

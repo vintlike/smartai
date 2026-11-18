@@ -1,0 +1,364 @@
+/* ────────────────────────────────────────────────────────────
+ * 布局框架结构样式（与业务无关，可整体复用）
+ * 色彩统一取自 antd token（行内注入）或 --app-* CSS 变量，此处只处理结构尺寸
+ * ──────────────────────────────────────────────────────────── */
+
+/* 固定视口高度：内容区内部滚动（聊天页 h-full 依赖此高度链） */
+.app-layout {
+  height: 100%;
+  min-height: 0;
+}
+
+/* ── Logo ──────────────────────────────────────────────────── */
+.app-layout-logo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  padding: 0 16px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  overflow: hidden;
+  white-space: nowrap;
+  color: inherit;
+
+  &.is-collapsed {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .app-layout-logo-img {
+    img,
+    svg {
+      display: block;
+      width: 28px;
+      height: 28px;
+    }
+  }
+}
+
+.app-layout-logo-title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* ── 顶栏 ──────────────────────────────────────────────────── */
+.ant-layout-header.app-layout-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 56px;
+  line-height: 56px;
+  padding: 0 16px;
+
+  .app-layout-logo {
+    padding: 0 12px 0 0;
+  }
+}
+
+.app-layout-header-spacer {
+  flex: 1;
+  min-width: 0;
+}
+
+.app-layout-top-menu {
+  flex: 1;
+  min-width: 0;
+  border-bottom: none;
+  background: transparent;
+}
+
+.app-layout-header-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  /* 头像与操作按钮之间的分隔线 */
+  .app-layout-header-divider {
+    width: 1px;
+    height: 16px;
+    margin: 0 6px;
+    background: var(--ant-color-border-secondary);
+  }
+
+  /* 语言切换：以当前语言文字作标识（固定最小宽度，避免切换时按钮宽度变化致使相邻图标位移） */
+  .app-locale-switch {
+    min-width: 36px;
+    padding-inline: 8px;
+    font-weight: 500;
+  }
+}
+
+.app-breadcrumb {
+  margin-inline-start: 8px;
+  white-space: nowrap;
+
+  .app-breadcrumb-link {
+    padding: 0;
+    border: none;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+      color: var(--app-color-primary, #415fff);
+    }
+  }
+}
+
+/* ── 设置抽屉 ─────────────────────────────────────────────── */
+.app-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.app-settings-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.app-settings-label {
+  margin: 0 0 8px;
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* 布局模式缩略图 */
+.app-layout-mode-list {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.app-layout-mode-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.app-layout-mode-thumb {
+  position: relative;
+  display: block;
+  width: 80px;
+  height: 60px;
+  /* 常驻边框占位：选中仅切换边框颜色，避免尺寸突变引起抖动 */
+  border: 2px solid var(--app-color-border-secondary, transparent);
+  border-radius: 5px;
+  background: var(--app-color-bg-layout, #f0f2f5);
+  box-shadow: 0 1px 2.5px 0 rgb(0 0 0 / 18%);
+  overflow: hidden;
+  transition: border-color 0.2s;
+
+  &.is-selected {
+    border-color: var(--app-color-primary, #415fff);
+  }
+}
+
+.preview-sider {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 30%;
+  background: var(--app-color-primary, #415fff);
+}
+
+.preview-header-right {
+  position: absolute;
+  inset: 0 0 auto auto;
+  width: 70%;
+  height: 30%;
+  background: var(--app-color-bg-container, #fff);
+  box-shadow: 0 0 1px var(--app-color-border, #888);
+}
+
+.preview-header-full {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 30%;
+  background: var(--app-color-primary, #415fff);
+  box-shadow: 0 0 1px var(--app-color-border, #888);
+}
+
+.app-layout-mode-title {
+  margin-top: 5px;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* 主题色板 */
+.app-theme-color-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.app-theme-color-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* 灰色 / 色弱辅助模式：整站滤镜 */
+html.app-grey {
+  filter: grayscale(100%);
+}
+
+html.app-weakness {
+  filter: invert(80%);
+}
+
+/* ── 用户头像下拉 ─────────────────────────────────────────── */
+.app-user-avatar-trigger {
+  display: inline-flex;
+  align-items: center;
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: inherit;
+}
+
+.app-user-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 200px;
+  padding: 4px 0;
+}
+
+.app-user-info-meta {
+  min-width: 0;
+}
+
+.app-user-info-name {
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.app-user-info-sub {
+  font-size: 12px;
+  opacity: 0.65;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 用户信息行仅作展示：还原禁用态文字色并去掉指针 */
+.ant-dropdown-menu-item-disabled.app-user-info-item {
+  color: inherit;
+  cursor: default;
+}
+
+/* ── 侧边栏 ────────────────────────────────────────────────── */
+.app-layout-sider-inner {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.app-layout-sider-menu {
+  flex: 1;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.app-layout-inline-menu {
+  border-inline-end: none;
+}
+
+/* ── 内容区 / 页脚 ─────────────────────────────────────────── */
+.app-layout-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 多页签导航栏（固定在内容区顶部，不参与页面滚动） */
+.app-layout-tabs {
+  flex-shrink: 0;
+  padding: 6px 16px 0;
+
+  .ant-tabs-nav {
+    margin: 0;
+  }
+}
+
+.app-layout-tabs-extra {
+  display: flex;
+  align-items: center;
+}
+
+/* 刷新当前标签与标签操作下拉之间的竖线分隔 */
+.app-layout-tabs-extra .ant-divider-vertical.app-layout-tabs-divider {
+  height: 14px;
+  margin: 0 4px;
+  /* 项目把 colorBorder/colorSplit 都覆盖为 #f0f0f0，过于隐淡，此处取文字四级色（约 25% 黑/白）保证可见 */
+  border-inline-start-color: var(--app-color-text-quaternary);
+}
+
+/* 标签右键菜单（fixed 定位到鼠标位置） */
+.app-layout-tabs-context {
+  position: fixed;
+  z-index: 1050;
+}
+
+/* 页面滚动区：内边距在此，页面内容超出时在内部滚动 */
+.app-layout-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 16px;
+}
+
+.app-layout-watermark {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-layout-footer {
+  text-align: center;
+  padding: 16px 24px;
+}
+
+/* ── 菜单加载 / 错误状态 ───────────────────────────────────── */
+.app-layout-menu-loading {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: 24px 0;
+}
+
+.app-layout-menu-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 12px 16px;
+  color: var(--app-color-text-secondary);
+  font-size: 12px;
+  line-height: 20px;
+}

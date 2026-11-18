@@ -1,0 +1,77 @@
+/* 业务表格与工具栏：颜色统一取自 --app-* 主题变量 */
+
+.app-table-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  &__left {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__right {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__divider {
+    height: 14px;
+    margin: 0 4px;
+    border-inline-start-color: var(--app-color-border-secondary);
+  }
+}
+
+.app-table-toolbar-icon-space {
+  display: inline-block;
+  width: 14px;
+}
+
+.app-column-setting {
+  min-width: 180px;
+  padding: 8px 4px;
+  background: var(--app-color-bg-elevated);
+  border-radius: 8px;
+  box-shadow:
+    0 6px 16px rgb(0 0 0 / 8%),
+    0 3px 6px -4px rgb(0 0 0 / 12%),
+    0 9px 28px 8px rgb(0 0 0 / 5%);
+
+  &__title {
+    padding: 0 10px 8px;
+    font-size: 12px;
+    color: var(--app-color-text-tertiary);
+  }
+
+  &__list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    padding: 0 10px;
+    overflow-y: auto;
+  }
+
+  &__footer {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 8px;
+    padding: 4px 10px 0;
+    border-top: 1px solid var(--app-color-border-secondary);
+  }
+}
+
+.app-data-table {
+  min-width: 0;
+}
+
+.app-table-row--zebra > td {
+  background: var(--app-color-fill-quaternary) !important;
+}

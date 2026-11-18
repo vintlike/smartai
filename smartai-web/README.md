@@ -1,219 +1,76 @@
-# smartai-web
+# SmartAI Web
 
-基于 React 19 + TypeScript + Vite + Ant Design 的**通用后台框架**。
-
-`layout`、`i18n`、`theme`、`menu` 四个模块与业务完全解耦，统一放在 `src/framework`，通过 Provider 对外提供能力；业务层只需要提供「菜单接口」和「页面组件」。
+AI 智能平台前端：React 19 + Vite 8 + Ant Design 6 + TypeScript，内置布局框架、菜单/路由同源、国际化、主题切换与本地 mock。
 
 ## 快速开始
 
 ```bash
 pnpm install
-pnpm dev      # http://localhost:5173
-pnpm build    # 类型检查 + 生产构建
+pnpm dev          # http://localhost:3344
 ```
 
-默认使用 `src/services/mock-menu.ts` 里的本地菜单数据。配置真实接口：
+dev 环境默认启用内存 mock，登录账号 `admin / admin123`。接真实后端时复制 `.env.example` 为 `.env.local` 并设置 `VITE_USE_MOCK=false` 与 `VITE_API_BASE_URL` / `VITE_API_TARGET`。
 
-```bash
-cp .env.example .env
-# 编辑 .env
-VITE_MENU_API=/api/system/menu/list
-```
+## 常用命令
+
+| 命令 | 说明 |
+| --- | --- |
+| `pnpm dev` | 启动开发服务器（含 mock） |
+| `pnpm build` | 类型检查 + 生产构建 |
+| `pnpm check` / `pnpm check:fix` | Biome 检查 / 自动修复 |
+| `pnpm format` | 格式化检查 |
 
 ## 目录结构
 
 ```
-src/
-├── framework/                 # 通用框架（不含任何业务逻辑）
-│   ├── config/                # 主题色板、布局默认值、Logo 默认配置
-│   ├── i18n/                  # I18nProvider + 中英文语言包
-│   ├── theme/                 # ThemeProvider（亮/暗、主题色、antd 集成）
-│   ├── menu/                  # MenuProvider、菜单归一化、图标、菜单项构建
-│   ├── layout/                # LayoutProvider、BasicLayout、Header/Sider/Tabs/设置抽屉
-│   ├── styles/                # 框架样式
-│   └── index.ts               # 框架统一出口
-├── router/                    # 动态路由生成 + 页面组件注册
-├── services/                  # 菜单接口（真实接口 / mock）
-├── pages/                     # 业务页面，路径与菜单 component 一一对应
-└── App.tsx                    # Provider 装配
+build/mock/          dev server 内存 mock（db / routes / middleware）
+src/api/             请求层与接口封装（http.ts 统一解包、注入 token）
+src/auth/            登录态与 RequireAuth
+src/components/      通用业务组件（PageContainer / SearchBar / DataTable / TableToolbar / OrgChart）
+src/config/          业务接入点：菜单、布局、页面组件映射、鉴权布局
+src/framework/       与业务解耦的布局框架（菜单、主题、i18n、页签、刷新）
+src/hooks/           通用 hook（useTableToolbar）
+src/pages/           业务页面
+src/router/          路由入口
 ```
 
-### 路径别名约定
+路径别名 `@/` 指向 `src/`。
 
-`src` 内所有模块导入统一使用 `@` 别名（`@` → `src`），包括同级文件与样式：
+## 菜单与路由
+
+- 页面路由由菜单声明自动生成：在 `src/config/menu.config.tsx` 声明菜单项，并在 `src/config/pageComponents.tsx` 补充同名的 `component` 映射。
+- 详情页等不进菜单的页面，声明 `hidden: true` 仍会生成路由。
+- 菜单数据源默认取本地静态数组；设置 `VITE_MENU_API` 后改为接口获取（dev 设为 `mock` 即走 `/api/sys/menu`），接口菜单需复用相同的 `path` 与 `component` 标识。路由骨架始终由本地声明生成。
+- 菜单加载中展示占位，失败展示错误屏与重试按钮；异步请求带序号保护，避免竞态覆盖。
+
+## 列表页规范
 
 ```tsx
-import { MenuProvider } from '@/framework/menu/MenuProvider';
-import '@/components/UserMenu.less';
+const toolbar = useTableToolbar(columns, fetchList);
+return <DataTable state={toolbar} dataSource={list} pagination={pagination} />;
 ```
 
-不要写成 `./UserMenu.less` 或 `../framework/menu/MenuProvider`。
-别名在 `tsconfig.app.json` 的 `paths` 与 `vite.config.ts` 的 `resolve.alias` 中同步声明；`biome` 已配置 `style/noRestrictedImports` 拦截 `./` 与 `../` 相对导入，写回即报错。
+- `DataTable` 统一提供工具栏（斑马纹、刷新、密度、列显隐）、默认分页（10/20/50）、空状态与横向滚动。
+- 列 `key` 决定列设置中的显隐标识，操作列建议显式设置 `key`。
+- `useTableToolbar` 会自动订阅页签刷新：页签刷新时只重新加载数据，保留筛选、页码与列设置。也可在任意页面用 `usePageRefresh(handler)` 接入同一机制。
 
-## 框架能力
-
-### 1. 菜单与路由
-
-- 支持多级菜单，自动补全完整路径，自动展开并高亮父级菜单。
-- 菜单由接口返回，`MenuProvider` 完成归一化、排序、过滤（`show: false`、`type: 'button'`、`meta.hideInMenu`）。
-- `component` 与 `src/pages` 下的文件路径约定映射：
-
-| 菜单 component      | 页面文件                         |
-| ------------------- | -------------------------------- |
-| `/chat/index`       | `src/pages/chat/index.tsx`       |
-| `/aigc/model/index` | `src/pages/aigc/model/index.tsx` |
-| `Layout`            | 分组节点，不渲染页面             |
-
-找不到页面文件时会渲染「页面组件未找到」提示，而不是白屏。
-
-菜单接口返回结构（节选）：
-
-```json
-[
-  {
-    "id": "a2ccfe694cd91cf159ad35626e4ea202",
-    "parentId": "0",
-    "name": "AIGC应用",
-    "path": "app",
-    "type": "menu",
-    "component": "Layout",
-    "perms": "app",
-    "meta": { "title": "AIGC应用", "icon": "PaperPlaneOutline" },
-    "orderNo": 1,
-    "disabled": false,
-    "isExt": false,
-    "keepalive": true,
-    "show": true,
-    "children": []
-  }
-]
-```
-
-说明：
-
-- `path` 支持子级已带父级前缀（如 `aigc` + `aigc/embed-store`）。
-- `icon` 统一使用 antd 图标，写图标组件名（`DashboardOutlined`）或短名（`dashboard` / `dashboard-outlined`）均可，归一化后忽略大小写、连字符与命名空间前缀；可用图标须在 `src/framework/menu/menuIconMap.ts` 注册，未注册不渲染图标（历史 ionicons 写法如 `GridOutline` 也做了别名兼容）。
-- `meta.localeKey` 可选，存在且命中语言包时菜单标题走 i18n。
-- `isExt: true` 或 `path` 为 URL 时按外链处理（新窗口打开）。
-- `disabled`、`keepalive` 字段已解析并保留，keepalive 暂未做页面缓存。
-
-### 2. Logo
-
-在 `LayoutProvider` 上传入 `logo`，或在 `src/framework/config/logo.ts` 中修改默认值：
+## 国际化
 
 ```tsx
-<LayoutProvider
-  logo={{
-    src: '/logo.svg',
-    title: 'SmartAI',
-    showTitle: true,
-    showTitleWhenCollapsed: false,
-    href: '/',
-  }}
->
+const { t, has, locale, setLocale } = useI18n();
+t('common.total', { total: 12 }); // 共 12 条
 ```
 
-`icon` 可传入自定义 ReactNode，优先级高于 `src`。
+- 词条位于 `src/framework/i18n/locales.ts`，支持 `{name}` 占位符插值。
+- 业务可在 `layout.config.tsx` 通过 `i18nMessages` 覆盖同名 key，`fallbackLocale` 控制缺词兜底语言。
 
-### 3. 主题与设置抽屉
+## 主题与样式
 
-顶栏右侧设置按钮打开抽屉，包含：
+- 主题变量统一使用 `--app-color-*`（主色、文本、边框、容器背景、滚动条等），避免写死颜色。
+- antd 组件颜色使用 `--ant-color-*` token；图表颜色应从 `useThemeMode()` 读取，跟随主题色联动。
+- 样式优先级：UnoCSS 原子类 + Less 组件样式；滚动条等全局样式只在主题层定义。
 
-- 主题风格：亮色 / 暗黑（`themeModes`）
-- 菜单模式：左侧 / 顶部 / 混合（`layoutModes`）
-- 主题色：`themeColors` 色板 + 自定义取色
-- 界面显示：多标签页、面包屑、菜单收起
-- 语言：简体中文 / English
+## 请求与 mock
 
-主题色板、UI 色卡、报表色卡位于 `src/framework/config/theme.ts`。
-
-同一文件中的 `lightThemeToken` / `darkThemeToken` 是亮暗主题的设计令牌，由 `ThemeProvider` 按当前模式映射到两处：
-
-- antd `ConfigProvider.theme.token`：`colorBgLayout`、`colorBgContainer`、`colorBgElevated`、`colorBorder`、`colorBorderSecondary`、`colorSplit`
-- 全局 CSS 变量：`--sa-color-bg-layout`、`--sa-color-bg-container`、`--sa-color-bg-elevated`、`--sa-color-border(-secondary)`、`--sa-scrollbar-thumb/track/width/gutter`
-
-`scrollbarColor` 支持 `滑块颜色` 或 `滑块颜色 轨道颜色` 两种写法。业务组件可直接使用 `useTheme().themeToken` 获取当前令牌。
-
-暗色令牌的 `colorBgLayout` 与 `colorBgElevated` 同为 `#010e1a`，因此 `Segmented` 的轨道用 `colorBgLayout`、选中块用 `colorBgContainer`，避免选中态不可辨识。
-
-### 4. 菜单收起
-
-左侧菜单模式与混合菜单模式均支持顶栏按钮收起 / 展开，也支持设置抽屉中的开关；窄屏（< lg）自动收起。
-
-混合模式下侧栏始终存在，内容为当前一级菜单的子项；一级菜单本身没有子项时（如主控台）只列出它自己，侧栏不会因切模式而消失。侧栏内容由 `useLayoutSider` 统一推导，`BasicLayout` 与 `LayoutHeader` 共用。
-
-混合模式的顶栏左侧留出了与侧栏等宽的 Logo 区（`.sa-header__brand`，宽度随收起在 224 / 64 之间切换），因此收起/展开按钮与垂直模式落在同一横坐标，切换模式时按钮不会跳位。
-
-### 5. 多标签页操作
-
-开启「多标签页」后，每个标签支持右键菜单，标签栏右侧提供刷新按钮与操作下拉菜单，菜单项为：刷新、关闭、关闭其它、关闭左侧、关闭右侧。
-
-- 刷新通过 `refreshTab(key?)` 递增 `refreshToken` 重新挂载当前路由页面，不做整页刷新，Tab 状态不丢失；刷新非当前标签时会先跳转到该标签
-- `useLayout()` 暴露 `closeTab`、`closeOtherTabs`、`closeLeftTabs`、`closeRightTabs`、`closeAllTabs`、`refreshTab`
-- 关闭左侧 / 右侧只作用于可关闭标签，当前页被关闭时自动跳到操作目标标签
-- Tab 状态保存在当前会话内存中，刷新浏览器后重建
-
-### 6. Provider API
-
-```tsx
-<BrowserRouter>
-  <I18nProvider messages={businessMessages} defaultLocale="zh-CN">
-    <ThemeProvider defaultSettings={{ mode: 'light' }}>
-      <MenuProvider request={fetchMenuList}>
-        <LayoutProvider>
-          <AppRouter />
-        </LayoutProvider>
-      </MenuProvider>
-    </ThemeProvider>
-  </I18nProvider>
-</BrowserRouter>;
-```
-
-| Provider         | 主要能力                                       |
-| ---------------- | ---------------------------------------------- |
-| `I18nProvider`   | 语言包合并、`t` / `has`、语言持久化            |
-| `ThemeProvider`  | 亮暗主题、主题色、antd `ConfigProvider` 集成   |
-| `MenuProvider`   | 菜单请求、归一化、菜单链查询、路由高亮数据     |
-| `LayoutProvider` | 菜单模式、收起状态、多 Tab（含刷新）、设置抽屉 |
-
-对应的 hooks：`useI18n`、`useTheme`、`useMenu`、`useLayout`、`useMenuTitle`。
-
-### 7. 国际化
-
-```tsx
-const { t, locale, setLocale } = useI18n();
-t('layout.settings.title'); // 支持 {name} 插值
-```
-
-业务语言包通过 `I18nProvider` 的 `messages` 传入，会与框架语言包深度合并：
-
-```tsx
-const businessMessages = {
-  'zh-CN': { business: { title: '业务标题' } },
-  'en-US': { business: { title: 'Business Title' } },
-};
-```
-
-### 8. 持久化
-
-| key                       | 内容                        |
-| ------------------------- | --------------------------- |
-| `smartai:theme-settings`  | 主题风格、主题色            |
-| `smartai:layout-settings` | 菜单模式、收起、Tab、面包屑 |
-| `smartai:locale`          | 当前语言                    |
-
-可通过各 Provider 的 `storageKey` 覆盖。
-
-## 接入业务
-
-1. 在 `src/pages` 下按菜单 `component` 创建页面（默认导出 React 组件）。
-2. 在 `src/services/menu.ts` 中替换为真实菜单接口（或配置 `VITE_MENU_API`）。
-3. 需要扩展语言包、色板、Logo 时，分别使用 `I18nProvider.messages`、`config/theme.ts`、`LayoutProvider.logo`。
-
-## 技术栈
-
-- React 19 / TypeScript / Vite
-- Ant Design 6（主题算法、组件）
-- React Router 7（动态路由）
-- Iconify（菜单图标）+ Lucide（框架图标）
-- Biome / Oxlint
+- `request` 自动拼接 query、注入 token、解包 `{ code, message, data }`，401 时派发 `smartai:unauthorized`。
+- mock 路由在 `build/mock/routes.ts` 注册：特殊路由必须放在通用 `crud()` 之前，否则会被 `/:id` 抢占。

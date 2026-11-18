@@ -1,56 +1,224 @@
-// 全局基础样式：只放重置与文档级设置，业务样式请写到对应模块的 less 中
+/* ════════════════════════════════════════════════════════════
+ * 全局基础样式（基础重置与滚动条部分迁移自旧项目 reset.less，
+ * 业务页面依赖这些全局规则）
+ * ════════════════════════════════════════════════════════════ */
 
-@font-family-base:
-  -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB',
-  'Microsoft YaHei', sans-serif;
-@scrollbar-size: 8px;
-@scrollbar-radius: 4px;
-
-:root {
-  --sa-color-bg-layout: #f8f8fa;
-  --sa-scrollbar-thumb: #c1c1c1;
-  --sa-scrollbar-track: transparent;
-  --sa-scrollbar-width: auto;
-  --sa-scrollbar-gutter: auto;
-
-  font-family: @font-family-base;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
+/* ── 基础重置 ── */
 * {
+  margin: 0;
+  padding: 0;
   box-sizing: border-box;
 }
 
 html,
 body,
 #root {
-  min-height: 100%;
-}
-
-html {
-  scrollbar-color: var(--sa-scrollbar-thumb) var(--sa-scrollbar-track);
-  scrollbar-width: var(--sa-scrollbar-width);
-  scrollbar-gutter: var(--sa-scrollbar-gutter);
+  height: 100%;
 }
 
 body {
-  margin: 0;
-  background: var(--sa-color-bg-layout);
+  font-family:
+    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans',
+    'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-// 滚动条：保持全局生效，内部滚动容器同样命中
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+/* ── 全局滚动条（颜色取自 --app-scrollbar-*，随明暗主题联动） ── */
 ::-webkit-scrollbar {
-  width: @scrollbar-size;
-  height: @scrollbar-size;
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-corner,
+::-webkit-scrollbar-track-piece {
+  background-color: transparent;
+}
+::-webkit-scrollbar-thumb,
+::-webkit-scrollbar-thumb:vertical,
+::-webkit-scrollbar-thumb:horizontal {
+  background-color: var(--app-scrollbar-thumb, #c1c1c1);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background-color: var(--app-scrollbar-thumb-hover, #a8a8a8);
 }
 
-::-webkit-scrollbar-thumb {
-  background: var(--sa-scrollbar-thumb);
-  border-radius: @scrollbar-radius;
+/* ── 通用工具类 ── */
+.cursor {
+  cursor: pointer;
 }
 
-::-webkit-scrollbar-track {
-  background: var(--sa-scrollbar-track);
+/* ════════════════════════════════════════════════════════════
+ * antd 组件全局覆写
+ * ════════════════════════════════════════════════════════════ */
+
+/* Table 表头不换行 + 省略号 */
+.ant-table-thead {
+  th {
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+  }
+}
+
+/* antd 在 .ant-table 上写了 scrollbar-color（token 灰），浏览器会因此弃用全局
+   ::-webkit-scrollbar 定制，深色主题下表内滚动条颜色与全局滚动条不一致。
+   这里改为引用全局滚动条变量，随明暗主题同步。 */
+.ant-table.ant-table {
+  scrollbar-color: var(--app-scrollbar-thumb, #c1c1c1) transparent;
+  /* 贴近全局 8px 滚动条宽度 */
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  &::-webkit-scrollbar-track,
+  &::-webkit-scrollbar-corner,
+  &::-webkit-scrollbar-track-piece {
+    background-color: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--app-scrollbar-thumb, #c1c1c1);
+    border-radius: 8px;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--app-scrollbar-thumb-hover, #a8a8a8);
+  }
+}
+
+/* 固定列表格的模拟横向滚动条是 div 绘制，同样对齐全局滚动条颜色 */
+.ant-table-wrapper.ant-table-wrapper .ant-table-sticky-scroll {
+  background: var(--app-color-bg-container);
+}
+.ant-table-wrapper.ant-table-wrapper .ant-table-sticky-scroll .ant-table-sticky-scroll-bar {
+  background-color: var(--app-scrollbar-thumb, #c1c1c1);
+}
+.ant-table-wrapper.ant-table-wrapper .ant-table-sticky-scroll .ant-table-sticky-scroll-bar:hover,
+.ant-table-wrapper.ant-table-wrapper .ant-table-sticky-scroll .ant-table-sticky-scroll-bar-active {
+  background-color: var(--app-scrollbar-thumb-hover, #a8a8a8);
+}
+
+/* Tabs 高度撑满容器：antd v6 面板层级为 body-holder > body > content（content 即面板根），
+ * antd 仅约束 body-holder（flex: auto; min-height: 0），body/content 默认无高度，
+ * 这里补全高度传递链，使 tab 面板内部可独立滚动（知识库数据页使用）。
+ * 注：v5 时代的 tabpane 层在 v6 已不存在，勿按旧层级写选择器 */
+.full-height-tabs {
+  .ant-tabs-body {
+    height: 100%;
+  }
+  .ant-tabs-content {
+    height: 100%;
+    overflow: auto;
+  }
+}
+
+/* Markdown 渲染（消息详情等），颜色统一跟随主题变量 */
+.app-markdown {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--app-color-text);
+  word-break: break-word;
+
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
+
+  p {
+    margin: 0 0 8px;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    margin: 12px 0 8px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+  h1 {
+    font-size: 18px;
+  }
+  h2 {
+    font-size: 16px;
+  }
+  h3 {
+    font-size: 15px;
+  }
+  h4 {
+    font-size: 14px;
+  }
+  ul,
+  ol {
+    margin: 0 0 8px;
+    padding-left: 20px;
+  }
+  li {
+    margin: 2px 0;
+  }
+  a {
+    color: var(--app-color-primary);
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+  code {
+    padding: 1px 5px;
+    border-radius: 4px;
+    background: var(--app-color-fill-secondary);
+    font-size: 12px;
+  }
+  pre {
+    margin: 0 0 8px;
+    padding: 12px;
+    border-radius: 8px;
+    overflow-x: auto;
+    background: var(--app-color-fill-quaternary);
+
+    code {
+      padding: 0;
+      background: transparent;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+  }
+  blockquote {
+    margin: 0 0 8px;
+    padding: 4px 12px;
+    border-left: 3px solid var(--app-color-border);
+    color: var(--app-color-text-secondary);
+  }
+  table {
+    width: 100%;
+    margin: 0 0 8px;
+    border-collapse: collapse;
+    font-size: 12px;
+
+    th,
+    td {
+      padding: 6px 8px;
+      border: 1px solid var(--app-color-border-secondary);
+      text-align: left;
+    }
+    th {
+      background: var(--app-color-fill-secondary);
+      font-weight: 600;
+    }
+  }
+  hr {
+    margin: 12px 0;
+    border: none;
+    border-top: 1px solid var(--app-color-border-secondary);
+  }
 }

@@ -1,50 +1,42 @@
 import { Button, Result } from 'antd';
 import { useNavigate } from 'react-router-dom';
-import { useI18n } from '@/framework/i18n/I18nProvider';
-import { useMenu } from '@/framework/menu/MenuProvider';
+import { useI18n } from '../../i18n/I18nProvider';
+import { useLayout } from '../AppLayoutProvider';
 
-export function NotFoundPage() {
+/** 菜单声明的 component 未在 pageComponents 中注册时的兜底页 */
+export function MissingPage({ component }: { component: string }) {
   const { t } = useI18n();
-  const { firstMenuPath } = useMenu();
-  const navigate = useNavigate();
 
   return (
-    <div className="sa-result-page">
-      <Result
-        status="404"
-        title="404"
-        subTitle={t('layout.notFound.description')}
-        extra={
-          <Button type="primary" onClick={() => navigate(firstMenuPath)}>
-            {t('layout.notFound.backHome')}
-          </Button>
-        }
-      />
-    </div>
+    <Result
+      status="warning"
+      title={t('result.missingComponent.title')}
+      subTitle={
+        <>
+          {t('result.missingComponent.description')}
+          <code>{component}</code>
+        </>
+      }
+    />
   );
 }
 
-export function MissingPage({ component }: { component: string }) {
+/** 404 兜底页，返回按钮跳转配置的首页 */
+export function NotFoundPage() {
   const { t } = useI18n();
+  const { config } = useLayout();
   const navigate = useNavigate();
 
   return (
-    <div className="sa-result-page">
-      <Result
-        status="warning"
-        title={t('layout.missingComponent.title')}
-        subTitle={
-          <>
-            {t('layout.missingComponent.description')}
-            <code>{component}</code>
-          </>
-        }
-        extra={
-          <Button type="primary" onClick={() => navigate('/')}>
-            {t('layout.notFound.backHome')}
-          </Button>
-        }
-      />
-    </div>
+    <Result
+      status="404"
+      title={t('result.notFound.title')}
+      subTitle={t('result.notFound.description')}
+      extra={
+        <Button type="primary" onClick={() => navigate(config.homePath ?? '/')}>
+          {t('common.backHome')}
+        </Button>
+      }
+    />
   );
 }

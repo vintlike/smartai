@@ -1,98 +1,65 @@
 /**
- * 通用后台框架入口。
- * layout / i18n / theme / menu 均与业务无关，接入方只依赖这里的导出。
+ * 布局框架统一出口（与业务完全解耦，可整体复制到其他项目复用）。
+ *
+ * 接入新项目仅需要：
+ * 1. 定义菜单数据（静态配置或接口获取，结构为 AppMenuItem[]）
+ * 2. 组装 LayoutConfig（标题、Logo、菜单模式、主题等）
+ * 3. 路由中以 <AppLayout config={layoutConfig} /> 为布局容器
  */
 
-export type { LogoConfig } from '@/framework/config/logo';
-export { defaultLogoConfig } from '@/framework/config/logo';
-export type { LayoutSettings, ThemeSettings } from '@/framework/config/settings';
+export type { I18nContextValue, I18nMessageMap } from './i18n/I18nProvider';
+export { I18nProvider, useI18n } from './i18n/I18nProvider';
+export { defaultLocale, messages, translate } from './i18n/locales';
+export { AppLayout, type AppLayoutProps } from './layout/AppLayout';
+export type { LayoutContextValue } from './layout/AppLayoutProvider';
+export { AppLayoutProvider, MOBILE_BREAKPOINT, useLayout } from './layout/AppLayoutProvider';
+export { AppBreadcrumb } from './layout/components/AppBreadcrumb';
+export { AppHeader } from './layout/components/AppHeader';
+export { AppLocaleSwitch } from './layout/components/AppLocaleSwitch';
+export { AppLogo } from './layout/components/AppLogo';
 export {
-  defaultCollapsedWidth,
-  defaultHeaderHeight,
-  defaultLayoutSettings,
-  defaultSiderWidth,
-  defaultStorageKeys,
-  defaultThemeSettings,
-} from '@/framework/config/settings';
-export type { LayoutMode, ThemeColorOption, ThemeMode, ThemeToken } from '@/framework/config/theme';
-// ---------- 配置 ----------
+  AppMenu,
+  type AppMenuProps,
+  type AppMenuVariant,
+  type MenuVariant,
+} from './layout/components/AppMenu';
+export { AppSettingDrawer } from './layout/components/AppSettingDrawer';
+export { AppSider } from './layout/components/AppSider';
+export { AppTabs } from './layout/components/AppTabs';
+export { AppThemeSwitch } from './layout/components/AppThemeSwitch';
+export { AppUserAvatar } from './layout/components/AppUserAvatar';
+export { MenuErrorInline } from './layout/components/MenuStateScreen';
+export { MissingPage, NotFoundPage } from './layout/components/ResultPages';
+export { usePageRefresh } from './layout/usePageRefresh';
+export type { MenuContextValue } from './menu/MenuProvider';
+export { MenuProvider, useMenu, useMenuContext } from './menu/MenuProvider';
 export {
-  chartColors,
-  colorPrimary,
-  darkThemeToken,
-  defaultLayoutMode,
-  defaultThemeMode,
-  layoutModes,
-  lightThemeToken,
-  themeColors,
-  themeModes,
-  themeTokens,
-  uiColors,
-} from '@/framework/config/theme';
-
-// ---------- i18n ----------
-export {
-  frameworkLocales,
-  frameworkMessages,
-  I18nProvider,
-  useI18n,
-} from '@/framework/i18n/I18nProvider';
+  findAncestorKeys,
+  findFirstLeaf,
+  findMenuItem,
+  flattenMenu,
+  getItemPath,
+  resolveMenuChain,
+  resolveSelectedKey,
+  resolveTabTitle,
+  resolveTopKey,
+  toAntdMenuItems,
+} from './menu/MenuUtil';
+export type { PageComponentMap } from './menu/routes';
+export { buildMenuRoutes, PageLoading, renderPage } from './menu/routes';
+export { chartColors, colorPrimary, defaultThemeColors, uiColors } from './theme/colors';
+export type { ThemeContextValue } from './theme/ThemeProvider';
+export { ThemeProvider, useThemeMode } from './theme/ThemeProvider';
+export { ThemeVars } from './theme/ThemeVars';
+export { darkThemeTokens, lightThemeTokens } from './theme/tokens';
 export type {
-  I18nContextValue,
-  I18nMessages,
-  I18nProviderProps,
-  LocaleMessages,
-  LocaleOption,
-} from '@/framework/i18n/types';
-export type { BasicLayoutProps } from '@/framework/layout/BasicLayout';
-// ---------- layout ----------
-export { BasicLayout } from '@/framework/layout/BasicLayout';
-export { AppLogo } from '@/framework/layout/components/AppLogo';
-export { BrandMark } from '@/framework/layout/components/BrandMark';
-export type { HeaderActionsProps } from '@/framework/layout/components/HeaderActions';
-export { HeaderActions } from '@/framework/layout/components/HeaderActions';
-export type { LayoutHeaderProps } from '@/framework/layout/components/LayoutHeader';
-export { LayoutHeader } from '@/framework/layout/components/LayoutHeader';
-export { MenuErrorScreen, MenuLoadingScreen } from '@/framework/layout/components/MenuStateScreen';
-export { PageLoading } from '@/framework/layout/components/PageLoading';
-export { MissingPage, NotFoundPage } from '@/framework/layout/components/ResultPages';
-export { SettingsDrawer } from '@/framework/layout/components/SettingsDrawer';
-export { SideMenu } from '@/framework/layout/components/SideMenu';
-export { TabsBar } from '@/framework/layout/components/TabsBar';
-export { TopMenu } from '@/framework/layout/components/TopMenu';
-export type {
-  LayoutContextValue,
-  LayoutProviderProps,
-  TabItem,
-} from '@/framework/layout/LayoutProvider';
-export { LayoutProvider, useLayout } from '@/framework/layout/LayoutProvider';
-export type { LayoutSiderState } from '@/framework/layout/useLayoutSider';
-export { useLayoutSider } from '@/framework/layout/useLayoutSider';
-export { MenuIcon } from '@/framework/menu/MenuIcon';
-// ---------- menu ----------
-export { MenuProvider, useMenu } from '@/framework/menu/MenuProvider';
-export type { MenuIconComponent } from '@/framework/menu/menuIconMap';
-export { resolveMenuIcon } from '@/framework/menu/menuIconMap';
-export { buildMenuItems } from '@/framework/menu/menuItems';
-export {
-  createMenuIndex,
-  findMenuChain,
-  findTopMenuNode,
-  flattenMenuTree,
-  getFirstMenuPath,
-  getMenuLeaves,
-  getOpenKeysByPath,
-  normalizeMenuTree,
-} from '@/framework/menu/menuUtils';
-export type {
-  AppMenuNode,
-  MenuContextValue,
-  MenuItem,
-  MenuMeta,
-  MenuProviderProps,
-  MenuRequest,
-} from '@/framework/menu/types';
-export { useMenuTitle } from '@/framework/menu/useMenuTitle';
-export type { ThemeContextValue, ThemeProviderProps } from '@/framework/theme/ThemeProvider';
-// ---------- theme ----------
-export { ThemeProvider, useTheme } from '@/framework/theme/ThemeProvider';
+  AppMenuItem,
+  AppUserInfo,
+  LayoutConfig,
+  Locale,
+  MenuMode,
+  MenuSource,
+  PageComponent,
+  ThemeColorOption,
+  ThemeMode,
+} from './types';

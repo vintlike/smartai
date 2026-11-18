@@ -1,11 +1,14 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import '@/index.less';
-import App from '@/App';
+import 'antd/dist/reset.css';
+import './index.less';
+import 'virtual:uno.css';
+import App from './App';
 
 const container = document.getElementById('root');
+
 if (!container) {
-  throw new Error('缺少根节点 #root，无法挂载应用');
+  throw new Error('未找到 #root 挂载节点');
 }
 
 createRoot(container).render(
