@@ -1,14 +1,15 @@
 import { DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { App, Button, Descriptions, Drawer, Empty, Space, Tabs, Tag } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { ConversationRecord, MessageRecord } from '@/api/aigc';
+import { conversationApi, messageApi } from '@/api/aigc';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import { Markdown } from '@/components/Markdown';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockConversationMessages, mockConversationSessions } from './mockData';
 import type { ConversationMessageItem, ConversationRole, ConversationSessionItem } from './types';
 
 const roleColors: Record<ConversationRole, string> = {
@@ -24,6 +25,37 @@ const roleLabels: Record<ConversationRole, string> = {
 };
 
 const PAGE_SIZE = 10;
+
+function toRole(role: string): ConversationRole {
+  return role === 'assistant' || role === 'system' ? role : 'user';
+}
+
+function toMessageItem(record: MessageRecord): ConversationMessageItem {
+  return {
+    id: record.id,
+    sessionId: record.conversationId,
+    username: record.username ?? '',
+    ip: record.ip ?? '',
+    role: toRole(record.role),
+    modelName: record.model ?? '',
+    tokenUsed: record.totalTokens ?? 0,
+    promptTokenUsed: record.promptTokens ?? 0,
+    conversationTime: record.createTime ?? '',
+    content: record.content ?? '',
+  };
+}
+
+function toSessionItem(record: ConversationRecord): ConversationSessionItem {
+  return {
+    id: record.id,
+    title: record.title ?? '',
+    username: record.username ?? '',
+    messageCount: record.messageCount ?? 0,
+    tokenUsed: record.tokenUsed ?? 0,
+    lastConversationTime: record.lastConversationTime ?? '',
+    createTime: record.createTime ?? '',
+  };
+}
 
 /** 搜索值归一化：去空格并转小写，空值视为不参与过滤 */
 function normalizeQuery(value: QueryParams[string]): string {
@@ -47,8 +79,10 @@ function MessageContent({ role, content }: { role: ConversationRole; content: st
 
 export default function ConversationManage() {
   const { message, modal } = App.useApp();
-  const [messages, setMessages] = useState<ConversationMessageItem[]>(mockConversationMessages);
-  const [sessions, setSessions] = useState<ConversationSessionItem[]>(mockConversationSessions);
+  const [messages, setMessages] = useState<ConversationMessageItem[]>([]);
+  const [messageTotal, setMessageTotal] = useState(0);
+  const [sessions, setSessions] = useState<ConversationSessionItem[]>([]);
+  const [sessionTotal, setSessionTotal] = useState(0);
   const [messageQuery, setMessageQuery] = useState<QueryParams>({});
   const [sessionQuery, setSessionQuery] = useState<QueryParams>({});
   const [messagePage, setMessagePage] = useState(1);
@@ -57,37 +91,77 @@ export default function ConversationManage() {
   const [sessionPageSize, setSessionPageSize] = useState(PAGE_SIZE);
   const [messageDetail, setMessageDetail] = useState<ConversationMessageItem | null>(null);
   const [sessionDetail, setSessionDetail] = useState<ConversationSessionItem | null>(null);
+  const [detailMessages, setDetailMessages] = useState<ConversationMessageItem[]>([]);
+
+  const loadMessages = useCallback(async () => {
+    try {
+      const result = await messageApi.list({
+        username: typeof messageQuery.username === 'string' ? messageQuery.username : undefined,
+        role: typeof messageQuery.role === 'string' ? messageQuery.role : undefined,
+        page: messagePage,
+        pageSize: messagePageSize,
+      });
+      setMessages(result.list.map(toMessageItem));
+      setMessageTotal(result.total);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '会话消息加载失败');
+    }
+  }, [message, messageQuery, messagePage, messagePageSize]);
+
+  const loadSessions = useCallback(async () => {
+    try {
+      const result = await conversationApi.list({
+        keyword: typeof sessionQuery.title === 'string' ? sessionQuery.title : undefined,
+        page: sessionPage,
+        pageSize: sessionPageSize,
+      });
+      setSessions(result.list.map(toSessionItem));
+      setSessionTotal(result.total);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '会话列表加载失败');
+    }
+  }, [message, sessionQuery, sessionPage, sessionPageSize]);
+
+  useEffect(() => {
+    void loadMessages();
+  }, [loadMessages]);
+
+  useEffect(() => {
+    void loadSessions();
+  }, [loadSessions]);
 
   const filteredMessages = useMemo(() => {
     const content = normalizeQuery(messageQuery.content);
-    const username = normalizeQuery(messageQuery.username);
-    const role = typeof messageQuery.role === 'string' ? messageQuery.role : '';
-    return messages.filter((item) => {
-      if (role && item.role !== role) return false;
-      if (username && !item.username.toLowerCase().includes(username)) return false;
-      if (content && !item.content.toLowerCase().includes(content)) return false;
-      return true;
-    });
+    if (!content) return messages;
+    return messages.filter((item) => item.content.toLowerCase().includes(content));
   }, [messages, messageQuery]);
 
   const filteredSessions = useMemo(() => {
-    const title = normalizeQuery(sessionQuery.title);
     const username = normalizeQuery(sessionQuery.username);
-    return sessions.filter((item) => {
-      if (title && !item.title.toLowerCase().includes(title)) return false;
-      if (username && !item.username.toLowerCase().includes(username)) return false;
-      return true;
-    });
+    if (!username) return sessions;
+    return sessions.filter((item) => item.username.toLowerCase().includes(username));
   }, [sessions, sessionQuery]);
 
-  /** 会话详情：按所属会话聚合消息，按时间正序还原对话过程 */
-  const sessionMessages = useMemo(() => {
-    if (!sessionDetail) return [];
-    return messages
-      .filter((item) => item.sessionId === sessionDetail.id)
-      .slice()
-      .sort((a, b) => a.conversationTime.localeCompare(b.conversationTime));
-  }, [messages, sessionDetail]);
+  const hasContentFilter = normalizeQuery(messageQuery.content).length > 0;
+  const hasUsernameFilter = normalizeQuery(sessionQuery.username).length > 0;
+
+  const openSessionDetail = async (record: ConversationSessionItem) => {
+    setSessionDetail(record);
+    setDetailMessages([]);
+    try {
+      const list = await messageApi.listByConversationId(record.id);
+      setDetailMessages(list.map(toMessageItem));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '会话消息加载失败');
+    }
+  };
+
+  /** 会话详情：按时间正序还原对话过程 */
+  const sessionMessages = useMemo(
+    () =>
+      detailMessages.slice().sort((a, b) => a.conversationTime.localeCompare(b.conversationTime)),
+    [detailMessages],
+  );
 
   const removeMessage = (record: ConversationMessageItem) => {
     modal.confirm({
@@ -96,10 +170,15 @@ export default function ConversationManage() {
       okText: '删除',
       cancelText: '取消',
       okButtonProps: { danger: true },
-      onOk: () => {
-        setMessages((prev) => prev.filter((item) => item.id !== record.id));
-        setMessageDetail((prev) => (prev?.id === record.id ? null : prev));
-        message.success('消息已删除');
+      onOk: async () => {
+        try {
+          await messageApi.delete(record.id);
+          setMessageDetail((prev) => (prev?.id === record.id ? null : prev));
+          message.success('消息已删除');
+          await loadMessages();
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除消息失败');
+        }
       },
     });
   };
@@ -111,11 +190,15 @@ export default function ConversationManage() {
       okText: '删除',
       cancelText: '取消',
       okButtonProps: { danger: true },
-      onOk: () => {
-        setSessions((prev) => prev.filter((item) => item.id !== record.id));
-        setMessages((prev) => prev.filter((item) => item.sessionId !== record.id));
-        setSessionDetail((prev) => (prev?.id === record.id ? null : prev));
-        message.success('会话已删除');
+      onOk: async () => {
+        try {
+          await conversationApi.delete(record.id);
+          setSessionDetail((prev) => (prev?.id === record.id ? null : prev));
+          message.success('会话已删除');
+          await Promise.all([loadMessages(), loadSessions()]);
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除会话失败');
+        }
       },
     });
   };
@@ -181,7 +264,7 @@ export default function ConversationManage() {
             type="link"
             size="small"
             icon={<EyeOutlined />}
-            onClick={() => setSessionDetail(record)}
+            onClick={() => void openSessionDetail(record)}
           >
             查看
           </Button>
@@ -199,17 +282,9 @@ export default function ConversationManage() {
     },
   ];
 
-  const messageToolbar = useTableToolbar<ConversationMessageItem>(messageColumns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setMessageQuery((prev) => ({ ...prev }));
-  });
+  const messageToolbar = useTableToolbar<ConversationMessageItem>(messageColumns, loadMessages);
 
-  const sessionToolbar = useTableToolbar<ConversationSessionItem>(sessionColumns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setSessionQuery((prev) => ({ ...prev }));
-  });
+  const sessionToolbar = useTableToolbar<ConversationSessionItem>(sessionColumns, loadSessions);
 
   return (
     <PageContainer title="对话数据管理">
@@ -265,7 +340,7 @@ export default function ConversationManage() {
                   pagination={{
                     current: messagePage,
                     pageSize: messagePageSize,
-                    total: filteredMessages.length,
+                    total: hasContentFilter ? filteredMessages.length : messageTotal,
                     onChange: (nextPage, nextPageSize) => {
                       setMessagePage(nextPage);
                       setMessagePageSize(nextPageSize);
@@ -313,7 +388,7 @@ export default function ConversationManage() {
                   pagination={{
                     current: sessionPage,
                     pageSize: sessionPageSize,
-                    total: filteredSessions.length,
+                    total: hasUsernameFilter ? filteredSessions.length : sessionTotal,
                     onChange: (nextPage, nextPageSize) => {
                       setSessionPage(nextPage);
                       setSessionPageSize(nextPageSize);

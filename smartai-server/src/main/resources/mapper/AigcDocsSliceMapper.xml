@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AigcDocsSliceMapper">
+
+    <resultMap id="sliceMap" type="com.smartai.entity.AigcDocsSlice">
+        <id column="id" property="id"/>
+        <result column="vector_id" property="vectorId"/>
+        <result column="doc_id" property="docId"/>
+        <result column="knowledge_id" property="knowledgeId"/>
+        <result column="name" property="name"/>
+        <result column="content" property="content"/>
+        <result column="char_count" property="charCount"/>
+        <result column="train_status" property="trainStatus"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, vector_id, doc_id, knowledge_id, name, content, char_count, train_status, create_time
+    </sql>
+
+    <select id="selectList" resultMap="sliceMap">
+        SELECT <include refid="columns"/> FROM aigc_docs_slice
+        <where>
+            <if test="docId != null and docId != ''">
+                AND doc_id = #{docId}
+            </if>
+            <if test="knowledgeId != null and knowledgeId != ''">
+                AND knowledge_id = #{knowledgeId}
+            </if>
+        </where>
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="search" resultMap="sliceMap">
+        SELECT <include refid="columns"/> FROM aigc_docs_slice
+        WHERE knowledge_id = #{knowledgeId}
+          AND content LIKE CONCAT('%', #{keyword}, '%')
+        ORDER BY create_time DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insertBatch">
+        INSERT INTO aigc_docs_slice (<include refid="columns"/>) VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.id}, #{item.vectorId}, #{item.docId}, #{item.knowledgeId}, #{item.name}, #{item.content},
+             #{item.charCount}, #{item.trainStatus}, #{item.createTime})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByDocId">
+        DELETE FROM aigc_docs_slice WHERE doc_id = #{docId}
+    </delete>
+
+    <delete id="deleteByKnowledgeId">
+        DELETE FROM aigc_docs_slice WHERE knowledge_id = #{knowledgeId}
+    </delete>
+
+    <update id="markTrainedBatch">
+        UPDATE aigc_docs_slice
+        SET vector_id = CASE id
+            <foreach collection="ids" item="sliceId" index="i">
+                WHEN #{sliceId} THEN #{vectorIds[${i}]}
+            </foreach>
+            END,
+            train_status = 1
+        WHERE id IN
+        <foreach collection="ids" item="sliceId" open="(" separator="," close=")">
+            #{sliceId}
+        </foreach>
+    </update>
+</mapper>

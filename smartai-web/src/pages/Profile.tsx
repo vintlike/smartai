@@ -15,7 +15,8 @@ import {
 } from 'antd';
 import { useEffect, useState } from 'react';
 import { updatePassword } from '@/api/auth';
-import { userApi } from '@/api/system';
+import type { SysUserRecord } from '@/api/system';
+import { deptApi, userApi } from '@/api/system';
 import { useAuth } from '@/auth/AuthProvider';
 import PageContainer from '@/components/PageContainer';
 
@@ -39,22 +40,59 @@ export default function Profile() {
   const [basicForm] = Form.useForm<BasicValues>();
   const [passwordForm] = Form.useForm<PasswordValues>();
   const [saving, setSaving] = useState(false);
+  const [detail, setDetail] = useState<SysUserRecord | null>(null);
+  const [deptName, setDeptName] = useState('');
 
   useEffect(() => {
     if (!user) return;
-    basicForm.setFieldsValue({
-      realName: user.realName ?? user.name,
-      sex: user.sex,
-      phone: user.phone,
-      email: user.email,
-    });
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [record, deptResult] = await Promise.all([
+          userApi.getById(String(user.id)),
+          deptApi.list(),
+        ]);
+        if (cancelled) return;
+        setDetail(record);
+        setDeptName(deptResult.list.find((item) => item.id === record.deptId)?.name ?? '');
+        basicForm.setFieldsValue({
+          realName: record.realName ?? user.name,
+          sex: record.gender,
+          phone: record.phone,
+          email: record.email,
+        });
+      } catch {
+        if (cancelled) return;
+        basicForm.setFieldsValue({ realName: user.realName ?? user.name });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [user, basicForm]);
 
   const saveBasic = async (values: BasicValues) => {
     if (!user) return;
     setSaving(true);
     try {
-      await userApi.update(user.id, { ...values });
+      await userApi.update({
+        id: user.id,
+        realName: values.realName,
+        gender: values.sex,
+        phone: values.phone,
+        email: values.email,
+      });
+      setDetail((prev) =>
+        prev
+          ? {
+              ...prev,
+              realName: values.realName,
+              gender: values.sex,
+              phone: values.phone,
+              email: values.email,
+            }
+          : prev,
+      );
       await refreshUser();
       message.success('资料已保存');
     } catch (error) {
@@ -117,9 +155,15 @@ export default function Profile() {
               </div>
             </div>
             <Descriptions column={1} size="small" className="mt-2">
-              <Descriptions.Item label="所属部门">{user?.deptName ?? '-'}</Descriptions.Item>
-              <Descriptions.Item label="性别">{user?.sex || '-'}</Descriptions.Item>
-              <Descriptions.Item label="创建时间">{user?.createTime ?? '-'}</Descriptions.Item>
+              <Descriptions.Item label="所属部门">
+                {deptName || user?.deptName || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="性别">
+                {detail?.gender || user?.sex || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="创建时间">
+                {detail?.createTime ?? user?.createTime ?? '-'}
+              </Descriptions.Item>
             </Descriptions>
           </Card>
         </Col>

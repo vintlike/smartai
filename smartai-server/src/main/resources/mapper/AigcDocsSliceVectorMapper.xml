@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AigcDocsSliceVectorMapper">
+
+    <insert id="insertBatch">
+        INSERT INTO aigc_docs_slice_vector
+            (vector_id, slice_id, doc_id, knowledge_id, embed_store_id, embed_model_id, dimension, embedding, create_time)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.vectorId}, #{item.sliceId}, #{item.docId}, #{item.knowledgeId}, #{item.embedStoreId},
+             #{item.embedModelId}, #{item.dimension}, #{item.embedding}, #{item.createTime})
+        </foreach>
+    </insert>
+
+    <delete id="deleteByDocId">
+        DELETE FROM aigc_docs_slice_vector WHERE doc_id = #{docId}
+    </delete>
+
+    <delete id="deleteByKnowledgeId">
+        DELETE FROM aigc_docs_slice_vector WHERE knowledge_id = #{knowledgeId}
+    </delete>
+</mapper>

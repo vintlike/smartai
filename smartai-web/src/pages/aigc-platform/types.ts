@@ -39,6 +39,8 @@ export interface VectorDBItem {
   id: string;
   alias: string;
   vendor: VectorVendor;
+  /** 后端实际存储的 provider 编码 */
+  providerCode?: string;
   dimension: number;
   host: string;
   port: number;
@@ -55,6 +57,8 @@ export interface KnowledgeBaseItem {
   description: string;
   vectorDb: string;
   embeddingModel: string;
+  embedStoreId?: string;
+  embedModelId?: string;
   docCount: number;
   totalSize: number;
   createdAt: string;
@@ -69,6 +73,7 @@ export interface KnowledgeDocumentItem {
   sliceCount: number;
   sliceStatus: '已训练' | '未训练';
   fileSize: number;
+  content?: string;
 }
 
 export interface KnowledgeSliceItem {

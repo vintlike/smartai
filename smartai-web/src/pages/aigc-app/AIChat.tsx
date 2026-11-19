@@ -19,7 +19,15 @@ import { prepareWithSegments, walkLineRanges } from '@chenglou/pretext';
 import { App, Avatar, Button, Card, Empty, Input, Select, Tag, Tooltip } from 'antd';
 import type { TextAreaRef } from 'antd/es/input/TextArea';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { conversationApi, type ModelRecord, messageApi, modelApi } from '@/api/aigc';
+import {
+  type ChatStreamTask,
+  conversationApi,
+  type MessageRecord,
+  type ModelRecord,
+  messageApi,
+  modelApi,
+  streamChat,
+} from '@/api/aigc';
 import { useAuth } from '@/auth/AuthProvider';
 import PageContainer from '@/components/PageContainer';
 
@@ -29,12 +37,12 @@ const FONT = '14px "PingFang SC", "Microsoft YaHei", sans-serif';
 const LINE_HEIGHT = 22;
 
 interface ConversationItem {
-  id: number | string;
+  id: string;
   title: string;
   createTime?: string;
-  endTime?: string;
-  chatTotal?: number;
+  messageCount?: number;
   tokenUsed?: number;
+  lastConversationTime?: string;
 }
 
 interface ChatMessage {
@@ -210,9 +218,9 @@ export default function AIChat() {
   const { message, modal } = App.useApp();
   const { user } = useAuth();
   const [models, setModels] = useState<ModelRecord[]>([]);
-  const [modelId, setModelId] = useState<number | string>();
+  const [modelId, setModelId] = useState<string>();
   const [conversations, setConversations] = useState<ConversationItem[]>([]);
-  const [conversationId, setConversationId] = useState<number | string>();
+  const [conversationId, setConversationId] = useState<string>();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [sending, setSending] = useState(false);
@@ -221,13 +229,13 @@ export default function AIChat() {
   const listRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<TextAreaRef>(null);
-  const replyTimerRef = useRef<number | null>(null);
+  const streamRef = useRef<ChatStreamTask | null>(null);
 
   const loadConversations = useCallback(async () => {
     if (!user) return;
     try {
-      const result = await conversationApi.list({ page: 1, pageSize: 50, userId: user.id });
-      setConversations(result.list as unknown as ConversationItem[]);
+      const list = await conversationApi.listByUserId(String(user.id));
+      setConversations(list);
     } catch {
       setConversations([]);
     }
@@ -271,48 +279,29 @@ export default function AIChat() {
 
   useEffect(
     () => () => {
-      if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
+      streamRef.current?.abort();
     },
     [],
   );
 
-  /** 演示回复：接入真实模型后替换为流式输出 */
-  const replyLater = useCallback((question: string, persist: (content: string) => void) => {
-    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
-    const content = `收到你的问题：「${question}」\n\n当前为前端演示回复，接入真实模型后将在这里输出流式内容。`;
-    replyTimerRef.current = window.setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { id: `msg-${Date.now()}`, role: 'assistant', content, time: formatClock() },
-      ]);
-      setSending(false);
-      replyTimerRef.current = null;
-      persist(content);
-    }, 600);
-  }, []);
-
   const stop = () => {
-    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
-    replyTimerRef.current = null;
+    streamRef.current?.abort();
+    streamRef.current = null;
     setSending(false);
     message.info('已停止生成');
   };
 
   const openConversation = async (record: ConversationItem) => {
-    if (replyTimerRef.current) {
-      window.clearTimeout(replyTimerRef.current);
-      replyTimerRef.current = null;
-      setSending(false);
-    }
+    stopStreamSilently();
     try {
-      const result = await messageApi.listByConversationId(record.id);
+      const list = await messageApi.listByConversationId(record.id);
       setConversationId(record.id);
       setMessages(
-        (result.list as unknown as Array<Record<string, unknown>>).map((item) => ({
+        list.map((item: MessageRecord) => ({
           id: String(item.id),
           role: item.role === 'user' ? 'user' : 'assistant',
-          content: String(item.content ?? ''),
-          time: formatClock(item.createTime as string | undefined),
+          content: item.content ?? '',
+          time: formatClock(item.createTime),
         })),
       );
     } catch (error) {
@@ -320,70 +309,111 @@ export default function AIChat() {
     }
   };
 
-  const newChat = () => {
-    if (replyTimerRef.current) window.clearTimeout(replyTimerRef.current);
-    replyTimerRef.current = null;
+  function stopStreamSilently() {
+    streamRef.current?.abort();
+    streamRef.current = null;
     setSending(false);
+  }
+
+  const newChat = () => {
+    stopStreamSilently();
     setConversationId(undefined);
     setMessages([]);
     setInputValue('');
   };
 
-  const handleSend = async () => {
-    const value = inputValue.trim();
-    if (!value || sending) return;
-    if (!user) return;
-
+  /** 发送问题：后端在流式过程中自动落库会话与消息，前端按事件增量渲染 */
+  const sendQuestion = (question: string, baseMessages: ChatMessage[] = messages) => {
+    const selectedModel = models.find((item) => item.id === modelId);
     const userMessage: ChatMessage = {
-      id: `msg-${Date.now()}`,
+      id: `local-user-${Date.now()}`,
       role: 'user',
-      content: value,
+      content: question,
       time: formatClock(),
     };
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
+    const replyId = `local-reply-${Date.now()}`;
+    const history = [...baseMessages, userMessage].map((item) => ({
+      role: item.role,
+      content: item.content,
+    }));
+    setMessages((prev) => [
+      ...prev,
+      userMessage,
+      { id: replyId, role: 'assistant', content: '', time: formatClock(), pending: true },
+    ]);
     setSending(true);
 
-    let targetId = conversationId;
-    try {
-      if (targetId === undefined) {
-        const created = await conversationApi.create({
-          title: value.slice(0, 20),
-          userId: user.id,
-          username: user.username,
-          chatTotal: 0,
-          tokenUsed: 0,
-          endTime: new Date().toISOString().slice(0, 19).replace('T', ' '),
-        });
-        targetId = created.id;
-        setConversationId(targetId);
-        void loadConversations();
-      }
-      await messageApi.create({ conversationId: targetId, role: 'user', content: value });
-    } catch (error) {
-      message.error(error instanceof Error ? error.message : '消息发送失败');
+    const task = streamChat(
+      {
+        model: selectedModel?.model,
+        conversationId,
+        messages: history,
+      },
+      {
+        onMeta: ({ conversationId: nextId }) => {
+          if (!nextId) return;
+          setConversationId(nextId);
+          void loadConversations();
+        },
+        onDelta: (delta) => {
+          setMessages((prev) =>
+            prev.map((item) =>
+              item.id === replyId ? { ...item, content: item.content + delta } : item,
+            ),
+          );
+        },
+        onError: (errorMessage) => {
+          message.error(errorMessage);
+          setMessages((prev) =>
+            prev.map((item) =>
+              item.id === replyId
+                ? { ...item, content: item.content || errorMessage, pending: false }
+                : item,
+            ),
+          );
+          setSending(false);
+        },
+        onDone: () => {
+          setMessages((prev) =>
+            prev.map((item) => (item.id === replyId ? { ...item, pending: false } : item)),
+          );
+          setSending(false);
+          void loadConversations();
+        },
+      },
+    );
+    streamRef.current = task;
+    task.done.catch((error: unknown) => {
+      if (error instanceof DOMException && error.name === 'AbortError') return;
       setSending(false);
-      return;
-    }
-
-    replyLater(value, (content) => {
-      void messageApi
-        .create({ conversationId: targetId, role: 'assistant', content })
-        .then(() => loadConversations())
-        .catch(() => undefined);
+      message.error(error instanceof Error ? error.message : '消息发送失败');
     });
+  };
+
+  const handleSend = () => {
+    const value = inputValue.trim();
+    if (!value || sending || !user) return;
+    setInputValue('');
+    sendQuestion(value);
   };
 
   const clearConversation = () => {
     modal.confirm({
       title: '清空当前对话',
-      content: '清空后本地与演示数据中的消息记录都会被删除，确定继续吗？',
+      content: '清空后当前会话与消息记录都会被删除，确定继续吗？',
       okButtonProps: { danger: true },
       onOk: async () => {
-        const persisted = messages.filter((item) => /^\d+$/.test(item.id));
-        await Promise.allSettled(persisted.map((item) => messageApi.delete(item.id)));
-        newChat();
-        message.success('对话已清空');
+        try {
+          if (conversationId) {
+            stopStreamSilently();
+            await conversationApi.delete(conversationId);
+          }
+          newChat();
+          await loadConversations();
+          message.success('对话已清空');
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '清空失败');
+        }
       },
     });
   };
@@ -418,9 +448,10 @@ export default function AIChat() {
     if (index < 0) return;
     const question = [...messages.slice(0, index)].reverse().find((item) => item.role === 'user');
     if (!question) return;
-    setMessages((prev) => prev.slice(0, index));
-    setSending(true);
-    replyLater(question.content, () => undefined);
+    stopStreamSilently();
+    const context = messages.slice(0, index);
+    setMessages(context);
+    sendQuestion(question.content, context);
   };
 
   const toggleFeedback = (id: string, value: 'like' | 'dislike') => {
@@ -464,10 +495,10 @@ export default function AIChat() {
                 >
                   <div className="flex items-center justify-between gap-2">
                     <span className="truncate text-13px">{item.title}</span>
-                    <Tag className="m-0 shrink-0 text-11px">{item.chatTotal ?? 0} 条</Tag>
+                    <Tag className="m-0 shrink-0 text-11px">{item.messageCount ?? 0} 条</Tag>
                   </div>
                   <div className="mt-1 text-11px text-[var(--ant-color-text-tertiary)]">
-                    {formatMoment(item.endTime)} · {item.tokenUsed ?? 0} tokens
+                    {formatMoment(item.lastConversationTime)} · {item.tokenUsed ?? 0} tokens
                   </div>
                 </div>
               ))

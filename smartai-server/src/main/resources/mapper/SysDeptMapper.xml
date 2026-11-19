@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.SysDeptMapper">
+
+    <resultMap id="deptMap" type="com.smartai.entity.SysDept">
+        <id column="id" property="id"/>
+        <result column="parent_id" property="parentId"/>
+        <result column="name" property="name"/>
+        <result column="sort_order" property="sortOrder"/>
+        <result column="description" property="description"/>
+    </resultMap>
+
+    <sql id="columns">id, parent_id, name, sort_order, description</sql>
+
+    <select id="selectById" resultMap="deptMap">
+        SELECT <include refid="columns"/> FROM sys_dept WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="deptMap">
+        SELECT <include refid="columns"/> FROM sys_dept
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="parentId != null and parentId != ''">
+                AND parent_id = #{parentId}
+            </if>
+        </where>
+        ORDER BY sort_order, id
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sys_dept (<include refid="columns"/>)
+        VALUES (#{id}, #{parentId}, #{name}, #{sortOrder}, #{description})
+    </insert>
+
+    <update id="updateById">
+        UPDATE sys_dept
+        <set>
+            id = #{id},
+            <if test="parentId != null">parent_id = #{parentId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="sortOrder != null">sort_order = #{sortOrder},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_dept WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByParentId">
+        DELETE FROM sys_dept WHERE parent_id = #{parentId}
+    </delete>
+</mapper>

@@ -22,7 +22,8 @@ import {
   TreeSelect,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { deptApi } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import { OrgChart, type OrgChartNode } from '@/components/OrgChart';
@@ -30,7 +31,7 @@ import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useI18n } from '@/framework';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockDepartments } from './mockData';
+import { buildDeptTree } from './deptUtils';
 import type { DeptItem } from './types';
 
 interface DeptFormValues {
@@ -75,34 +76,6 @@ function toOrgNodes(nodes: DeptItem[]): OrgChartNode[] {
   }));
 }
 
-function addChildToTree(nodes: DeptItem[], parentId: string, child: DeptItem): DeptItem[] {
-  return nodes.map((node) => {
-    if (node.id === parentId) {
-      return { ...node, children: [...(node.children ?? []), child] };
-    }
-    if (node.children) {
-      return { ...node, children: addChildToTree(node.children, parentId, child) };
-    }
-    return node;
-  });
-}
-
-function updateTree(nodes: DeptItem[], id: string, payload: Partial<DeptItem>): DeptItem[] {
-  return nodes.map((node) => {
-    if (node.id === id) return { ...node, ...payload };
-    if (node.children) return { ...node, children: updateTree(node.children, id, payload) };
-    return node;
-  });
-}
-
-function removeFromTree(nodes: DeptItem[], id: string): DeptItem[] {
-  return nodes
-    .filter((node) => node.id !== id)
-    .map((node) =>
-      node.children ? { ...node, children: removeFromTree(node.children, id) } : node,
-    );
-}
-
 /** 按关键字过滤部门树：命中节点保留整棵子树，子节点命中则保留祖先链路 */
 function filterDeptTree(nodes: DeptItem[], keyword: string): DeptItem[] {
   if (!keyword) return nodes;
@@ -119,7 +92,7 @@ function filterDeptTree(nodes: DeptItem[], keyword: string): DeptItem[] {
 export default function DepartmentManage() {
   const { message, modal } = App.useApp();
   const { t } = useI18n();
-  const [departments, setDepartments] = useState<DeptItem[]>(mockDepartments);
+  const [departments, setDepartments] = useState<DeptItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<DeptItem | null>(null);
   const [form] = Form.useForm<DeptFormValues>();
@@ -131,6 +104,19 @@ export default function DepartmentManage() {
   const [orgZoom, setOrgZoom] = useState(1);
 
   const isLegacy = layout === 'old';
+
+  const loadData = useCallback(async () => {
+    try {
+      const result = await deptApi.list();
+      setDepartments(buildDeptTree(result.list));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '部门列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
   const filteredDepartments = useMemo(
@@ -168,10 +154,15 @@ export default function DepartmentManage() {
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
-      onOk: () => {
-        setDepartments((prev) => removeFromTree(prev, record.id));
-        setSelectedId((prev) => (prev === record.id ? undefined : prev));
-        message.success('删除成功');
+      onOk: async () => {
+        try {
+          await deptApi.delete(record.id);
+          setSelectedId((prev) => (prev === record.id ? undefined : prev));
+          message.success('删除成功');
+          await loadData();
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除失败');
+        }
       },
     });
   };
@@ -201,10 +192,9 @@ export default function DepartmentManage() {
 
   const openEdit = (record: DeptItem) => {
     setEditing(record);
-    const parent = flatDepartments.find((item) => item.deptName === record.parentDept);
     form.resetFields();
     form.setFieldsValue({
-      parentDept: parent?.id,
+      parentDept: record.parentId,
       deptName: record.deptName,
       deptDesc: record.deptDesc,
     });
@@ -213,34 +203,25 @@ export default function DepartmentManage() {
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    const parentDept = values.parentDept
-      ? (flatDepartments.find((item) => item.id === values.parentDept)?.deptName ?? '-')
-      : '-';
-    if (editing) {
-      setDepartments((prev) =>
-        updateTree(prev, editing.id, {
-          deptName: values.deptName,
-          deptDesc: values.deptDesc ?? '',
-          parentDept,
-        }),
-      );
-      message.success('编辑成功');
-    } else {
-      const newDept: DeptItem = {
-        id: `dept-${Date.now()}`,
-        deptName: values.deptName,
-        parentDept,
-        deptDesc: values.deptDesc ?? '',
-      };
-      if (values.parentDept) {
-        setDepartments((prev) => addChildToTree(prev, values.parentDept as string, newDept));
+    const payload = {
+      name: values.deptName,
+      parentId: values.parentDept ?? null,
+      description: values.deptDesc ?? '',
+    };
+    try {
+      if (editing) {
+        await deptApi.update({ ...payload, id: editing.id });
+        message.success('编辑成功');
       } else {
-        setDepartments((prev) => [...prev, newDept]);
+        await deptApi.create(payload);
+        message.success('新建部门成功');
       }
-      message.success('新建部门成功');
+      setModalOpen(false);
+      setEditing(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存部门失败');
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
   const columns: ColumnsType<DeptItem> = [
@@ -272,9 +253,14 @@ export default function DepartmentManage() {
             }
             okText="删除"
             cancelText="取消"
-            onConfirm={() => {
-              setDepartments((prev) => removeFromTree(prev, record.id));
-              message.success('删除成功');
+            onConfirm={async () => {
+              try {
+                await deptApi.delete(record.id);
+                message.success('删除成功');
+                await loadData();
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : '删除失败');
+              }
             }}
           >
             <Button type="link" size="small" danger>
@@ -286,11 +272,7 @@ export default function DepartmentManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<DeptItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<DeptItem>(columns, loadData);
 
   return (
     <PageContainer

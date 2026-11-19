@@ -1,14 +1,15 @@
 import { PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, Modal, Tree } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SysMenuRecord, SysRoleRecord } from '@/api/system';
+import { menuApi, roleApi } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { menuPermissionTree, mockRoles } from './mockData';
-import type { RoleItem } from './types';
+import type { MenuPermissionNode, RoleItem } from './types';
 
 interface RoleFormValues {
   roleName: string;
@@ -17,15 +18,63 @@ interface RoleFormValues {
   menuPermissions: string[];
 }
 
+function buildMenuTree(records: SysMenuRecord[]): MenuPermissionNode[] {
+  const nodes = new Map<string, MenuPermissionNode>();
+  records.forEach((record) => {
+    nodes.set(record.id, { key: record.id, title: record.name });
+  });
+  const roots: MenuPermissionNode[] = [];
+  records.forEach((record) => {
+    const node = nodes.get(record.id);
+    const parent =
+      record.parentId && record.parentId !== '0' ? nodes.get(record.parentId) : undefined;
+    if (!node) return;
+    if (parent) {
+      parent.children = [...(parent.children ?? []), node];
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
 export default function RoleManage() {
   const { message, modal } = App.useApp();
-  const [roles, setRoles] = useState<RoleItem[]>(mockRoles);
+  const [roles, setRoles] = useState<RoleItem[]>([]);
+  const [menuTree, setMenuTree] = useState<MenuPermissionNode[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<RoleItem | null>(null);
   const [form] = Form.useForm<RoleFormValues>();
   const [query, setQuery] = useState<QueryParams>({});
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [roleResult, menuResult] = await Promise.all([roleApi.list(), menuApi.list()]);
+      const menuTreeData = buildMenuTree(menuResult.list);
+      const roleItems = await Promise.all(
+        roleResult.list.map(async (record: SysRoleRecord) => {
+          const menus = await menuApi.listByRoleId(record.id).catch(() => []);
+          return {
+            id: record.id,
+            roleName: record.name,
+            roleKey: record.code,
+            roleDesc: record.description ?? '',
+            menuPermissions: menus.map((item) => item.id),
+          } satisfies RoleItem;
+        }),
+      );
+      setMenuTree(menuTreeData);
+      setRoles(roleItems);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '角色列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredRoles = useMemo(() => {
     const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
@@ -69,20 +118,29 @@ export default function RoleManage() {
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    if (editing) {
-      setRoles((prev) =>
-        prev.map((item) => (item.id === editing.id ? { ...item, ...values } : item)),
-      );
-      message.success('编辑角色成功');
-    } else {
-      setRoles((prev) => [
-        { id: `role-${Date.now()}`, ...values, roleDesc: values.roleDesc ?? '' },
-        ...prev,
-      ]);
-      message.success('新建角色成功');
+    const payload = {
+      name: values.roleName,
+      code: values.roleKey,
+      description: values.roleDesc ?? '',
+    };
+    try {
+      let roleId: string;
+      if (editing) {
+        await roleApi.update({ ...payload, id: editing.id });
+        roleId = editing.id;
+        message.success('编辑角色成功');
+      } else {
+        const created = await roleApi.create(payload);
+        roleId = created.id;
+        message.success('新建角色成功');
+      }
+      await roleApi.assignMenus(roleId, values.menuPermissions ?? []);
+      setModalOpen(false);
+      setEditing(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存角色失败');
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
   const confirmDelete = (record: RoleItem) => {
@@ -92,9 +150,14 @@ export default function RoleManage() {
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
-      onOk: () => {
-        setRoles((prev) => prev.filter((item) => item.id !== record.id));
-        message.success('删除成功');
+      onOk: async () => {
+        try {
+          await roleApi.delete(record.id);
+          message.success('删除成功');
+          await loadData();
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除失败');
+        }
       },
     });
   };
@@ -121,11 +184,7 @@ export default function RoleManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<RoleItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<RoleItem>(columns, loadData);
 
   return (
     <PageContainer
@@ -211,7 +270,7 @@ export default function RoleManage() {
                 checkable
                 defaultExpandAll
                 selectable={false}
-                treeData={menuPermissionTree}
+                treeData={menuTree}
                 className="max-h-300px overflow-y-auto rounded-6px border border-solid border-[var(--ant-color-border-secondary)] p-3"
               />
             </Form.Item>

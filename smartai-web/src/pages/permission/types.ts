@@ -11,7 +11,9 @@ export interface UserItem {
   username: string;
   realName: string;
   role: string;
+  roleIds?: string[];
   deptName: string;
+  deptId?: string;
   status: 0 | 1;
   email: string;
   phone: string;
@@ -20,6 +22,7 @@ export interface UserItem {
 export interface DeptItem {
   id: string;
   deptName: string;
+  parentId?: string;
   parentDept: string;
   deptDesc: string;
   children?: DeptItem[];

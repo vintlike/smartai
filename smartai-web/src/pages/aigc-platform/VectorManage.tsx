@@ -13,13 +13,13 @@ import {
   Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { type EmbedStoreRecord, embedStoreApi } from '@/api/aigc';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockVectorDBs } from './mockData';
 import type { VectorDBItem, VectorVendor } from './types';
 
 const vendorColors: Record<VectorVendor, string> = {
@@ -27,6 +27,37 @@ const vendorColors: Record<VectorVendor, string> = {
   PgVector: 'blue',
   Milvus: 'green',
 };
+
+const vendorCodeMap: Record<string, string> = {
+  Redis: 'redis',
+  PgVector: 'pgvector',
+  Milvus: 'milvus',
+};
+
+function toVendorName(provider?: string): VectorVendor {
+  const matched = Object.entries(vendorCodeMap).find(
+    ([, code]) => code === provider?.toLowerCase(),
+  );
+  return (matched?.[0] ?? provider ?? 'Milvus') as VectorVendor;
+}
+
+function mapRecord(record: EmbedStoreRecord): VectorDBItem {
+  const vendor = toVendorName(record.provider);
+  return {
+    id: record.id,
+    alias: record.name,
+    vendor,
+    providerCode: record.provider,
+    dimension: record.dimension ?? 1024,
+    host: record.host ?? '',
+    port: record.port ?? 0,
+    username: record.username,
+    password: record.password,
+    dbName: record.databaseName,
+    tableName: record.tableName,
+    redisIndex: vendor === 'Redis' ? record.tableName : undefined,
+  };
+}
 
 const dimensionOptions = [512, 768, 1024, 1536].map((value) => ({ value, label: `${value}` }));
 
@@ -45,7 +76,7 @@ interface VectorFormValues {
 
 export default function VectorManage() {
   const { message } = App.useApp();
-  const [dataSource, setDataSource] = useState<VectorDBItem[]>(mockVectorDBs);
+  const [dataSource, setDataSource] = useState<VectorDBItem[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<VectorDBItem | null>(null);
   const [form] = Form.useForm<VectorFormValues>();
@@ -53,6 +84,19 @@ export default function VectorManage() {
   const [query, setQuery] = useState<QueryParams>({});
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
+
+  const loadData = useCallback(async () => {
+    try {
+      const result = await embedStoreApi.list({ pageSize: 100 });
+      setDataSource(result.list.map(mapRecord));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '向量库加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredRecords = useMemo(() => {
     const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
@@ -97,29 +141,30 @@ export default function VectorManage() {
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    const cleaned: Partial<VectorDBItem> = { ...values };
-
-    if (values.vendor === 'Redis') {
-      delete cleaned.dbName;
-      delete cleaned.tableName;
-    } else {
-      delete cleaned.redisIndex;
+    const payload = {
+      name: values.alias,
+      provider: vendorCodeMap[values.vendor] ?? values.vendor.toLowerCase(),
+      host: values.host,
+      port: values.port,
+      dimension: values.dimension,
+      username: values.vendor === 'Milvus' ? undefined : values.username,
+      password: values.vendor === 'Milvus' ? undefined : values.password,
+      databaseName: values.vendor === 'Redis' ? undefined : values.dbName,
+      tableName: values.vendor === 'Redis' ? values.redisIndex : values.tableName,
+    };
+    try {
+      if (editing) {
+        await embedStoreApi.update({ ...payload, id: editing.id });
+        message.success('编辑向量库成功');
+      } else {
+        await embedStoreApi.create(payload);
+        message.success('新增向量库成功');
+      }
+      handleCancel();
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存向量库失败');
     }
-    if (values.vendor === 'Milvus') {
-      delete cleaned.username;
-      delete cleaned.password;
-    }
-
-    if (editing) {
-      setDataSource((prev) =>
-        prev.map((item) => (item.id === editing.id ? { ...item, ...cleaned } : item)),
-      );
-      message.success('编辑向量库成功');
-    } else {
-      setDataSource((prev) => [...prev, { ...(cleaned as VectorDBItem), id: `vdb-${Date.now()}` }]);
-      message.success('新增向量库成功');
-    }
-    handleCancel();
   };
 
   const columns: ColumnsType<VectorDBItem> = [
@@ -153,9 +198,14 @@ export default function VectorManage() {
             okText="删除"
             cancelText="取消"
             okButtonProps={{ danger: true }}
-            onConfirm={() => {
-              setDataSource((prev) => prev.filter((item) => item.id !== record.id));
-              message.success('删除成功');
+            onConfirm={async () => {
+              try {
+                await embedStoreApi.delete(record.id);
+                message.success('删除成功');
+                await loadData();
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : '删除失败');
+              }
             }}
           >
             <Button type="link" size="small" danger>
@@ -167,11 +217,7 @@ export default function VectorManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<VectorDBItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<VectorDBItem>(columns, loadData);
 
   return (
     <PageContainer

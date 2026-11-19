@@ -1,93 +1,58 @@
-import {
-  AppstoreOutlined,
-  CommentOutlined,
-  CreditCardOutlined,
-  DashboardOutlined,
-  DatabaseOutlined,
-  FileTextOutlined,
-  FolderOpenOutlined,
-  KeyOutlined,
-  PartitionOutlined,
-  PictureOutlined,
-  SettingOutlined,
-  TeamOutlined,
-  UserOutlined,
-} from '@ant-design/icons';
-import { createElement, type ReactNode } from 'react';
 import type { AppMenuItem } from '@/framework';
 import { request } from './http';
 
-export interface SysMenu {
-  id: number;
+/** 后端菜单记录（SysMenu） */
+export interface BackendMenu {
+  id: string;
   name: string;
-  parentId?: number | null;
+  parentId?: string | null;
   path?: string;
   perms?: string;
-  type: 'catalog' | 'menu' | 'button' | 'btn';
-  orderNo: number;
+  type: 'catalog' | 'menu' | 'button';
+  sortOrder?: number;
   icon?: string;
   component?: string;
-  isDisabled?: number;
-  isExt?: number;
-  isKeepalive?: number;
-  isShow?: number;
+  isDisabled?: boolean | number;
+  isExternal?: boolean | number;
+  isKeepalive?: boolean | number;
+  isVisible?: boolean | number;
 }
 
-export const iconMap: Record<string, ReactNode> = {
-  dashboard: createElement(DashboardOutlined),
-  appstore: createElement(AppstoreOutlined),
-  comment: createElement(CommentOutlined),
-  database: createElement(DatabaseOutlined),
-  folder: createElement(FolderOpenOutlined),
-  creditCard: createElement(CreditCardOutlined),
-  team: createElement(TeamOutlined),
-  user: createElement(UserOutlined),
-  key: createElement(KeyOutlined),
-  setting: createElement(SettingOutlined),
-  fileText: createElement(FileTextOutlined),
-  picture: createElement(PictureOutlined),
-  partition: createElement(PartitionOutlined),
-};
-
-export function toMenuItem(menu: SysMenu): AppMenuItem {
-  return {
-    key: menu.path ?? String(menu.id),
-    path: menu.path,
-    label: menu.name,
-    icon: menu.icon ? iconMap[menu.icon] : undefined,
-    component: menu.component,
-    hidden: menu.isShow === 0,
-    disabled: menu.isDisabled === 1,
-    external: menu.isExt === 1,
-  };
+/** 当前登录用户可访问的菜单标识集合 */
+export interface MenuAccess {
+  paths: Set<string>;
+  components: Set<string>;
 }
 
-export function toMenuTree(list: SysMenu[], parentId: number | null = null): AppMenuItem[] {
-  return list
-    .filter((item) => item.type !== 'button' && item.type !== 'btn')
-    .filter((item) => (item.parentId ?? null) === parentId)
-    .sort((a, b) => a.orderNo - b.orderNo)
-    .map((item) => {
-      const menu = toMenuItem(item);
-      const children = toMenuTree(list, item.id);
-      return children.length > 0 ? { ...menu, children } : menu;
-    });
+interface MenuListResponse {
+  list?: BackendMenu[];
 }
 
-/**
- * 菜单接口地址：VITE_MENU_API 为空时使用默认地址（dev 下走 mock）；
- * 设为 'mock' 同样走默认 mock 地址，设为其他值则视为真实接口地址。
- */
-export function getMenuEndpoint(): string {
-  const configured = import.meta.env.VITE_MENU_API;
-  return configured && configured !== 'mock' ? configured : '/api/sys/menu';
-}
-
-/** 拉取菜单树：兼容后端直接返回数组与分页结构 { list, total } 两种形式 */
-export async function fetchMenus(): Promise<AppMenuItem[]> {
-  const data = await request<SysMenu[] | { list?: SysMenu[]; total?: number }>(getMenuEndpoint(), {
-    params: { pageSize: 999 },
-  });
+/** 拉取当前登录用户有权限的菜单（后端按令牌身份过滤，超管返回全量） */
+export async function fetchMenuAccess(): Promise<MenuAccess> {
+  const data = await request<BackendMenu[] | MenuListResponse>('/api/sys/menu/current');
   const list = Array.isArray(data) ? data : (data.list ?? []);
-  return toMenuTree(list);
+  const paths = new Set<string>();
+  const components = new Set<string>();
+  for (const item of list) {
+    if (item.type === 'button') continue;
+    if (item.path) paths.add(item.path);
+    if (item.component) components.add(item.component);
+  }
+  return { paths, components };
+}
+
+/** 用后端授权结果裁剪本地菜单，保留原有菜单结构与展示文案 */
+export function filterMenusByAccess(items: AppMenuItem[], access: MenuAccess): AppMenuItem[] {
+  const result: AppMenuItem[] = [];
+  for (const item of items) {
+    const children = item.children ? filterMenusByAccess(item.children, access) : [];
+    const allowed =
+      (item.path ? access.paths.has(item.path) : false) ||
+      (item.component ? access.components.has(item.component) : false);
+    if (allowed || children.length > 0) {
+      result.push({ ...item, children: children.length > 0 ? children : undefined });
+    }
+  }
+  return result;
 }

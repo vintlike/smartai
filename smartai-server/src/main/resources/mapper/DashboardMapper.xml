@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.DashboardMapper">
+
+    <sql id="messageCondition">
+        role = 'assistant'
+        <if test="startTime != null">
+            AND create_time &gt;= #{startTime}
+        </if>
+        <if test="endTime != null">
+            AND create_time &lt; #{endTime}
+        </if>
+    </sql>
+
+    <select id="selectMessageStat" resultType="com.smartai.dto.DashboardStatDTO">
+        SELECT COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens,
+               COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+               GREATEST(COALESCE(SUM(total_tokens - prompt_tokens), 0), 0) AS completion_tokens,
+               COUNT(DISTINCT NULLIF(user_id, '')) AS active_user_count
+        FROM aigc_message
+        WHERE <include refid="messageCondition"/>
+    </select>
+
+    <select id="selectMessageTrend" resultType="com.smartai.dto.DashboardTrendDTO">
+        SELECT DATE(create_time) AS stat_date,
+               COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens,
+               COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+               GREATEST(COALESCE(SUM(total_tokens - prompt_tokens), 0), 0) AS completion_tokens
+        FROM aigc_message
+        WHERE <include refid="messageCondition"/>
+        GROUP BY DATE(create_time)
+        ORDER BY stat_date ASC
+    </select>
+
+    <select id="selectUserTrend" resultType="com.smartai.dto.DashboardTrendDTO">
+        SELECT DATE(create_time) AS stat_date,
+               COUNT(*) AS new_user_count
+        FROM sys_user
+        <where>
+            <if test="startTime != null">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time &lt; #{endTime}
+            </if>
+        </where>
+        GROUP BY DATE(create_time)
+        ORDER BY stat_date ASC
+    </select>
+
+    <select id="countNewUsers" resultType="long">
+        SELECT COUNT(*) FROM sys_user
+        <where>
+            <if test="startTime != null">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time &lt; #{endTime}
+            </if>
+        </where>
+    </select>
+
+    <select id="countKnowledgeBefore" resultType="long">
+        SELECT COUNT(*) FROM aigc_knowledge
+        WHERE (create_time &lt; #{endTime} OR create_time IS NULL)
+    </select>
+
+    <select id="selectAssets" resultType="com.smartai.dto.DashboardAssetsDTO">
+        SELECT (SELECT COUNT(*) FROM sys_user) AS user_count,
+               (SELECT COUNT(*) FROM aigc_model) AS model_count,
+               (SELECT COUNT(*) FROM aigc_app) AS app_count,
+               (SELECT COUNT(*) FROM aigc_knowledge) AS knowledge_count,
+               (SELECT COUNT(*) FROM aigc_docs) AS doc_count,
+               (SELECT COUNT(*) FROM aigc_conversation) AS conversation_count
+    </select>
+
+    <select id="selectModelUsage" resultType="com.smartai.dto.DashboardRankDTO">
+        SELECT COALESCE(NULLIF(model, ''), '未知模型') AS name,
+               COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens
+        FROM aigc_message
+        WHERE <include refid="messageCondition"/>
+        GROUP BY COALESCE(NULLIF(model, ''), '未知模型')
+        ORDER BY total_tokens DESC, call_count DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectTopUsers" resultType="com.smartai.dto.DashboardRankDTO">
+        SELECT COALESCE(NULLIF(MAX(username), ''), NULLIF(MAX(user_id), ''), '未知用户') AS name,
+               COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens
+        FROM aigc_message
+        WHERE <include refid="messageCondition"/>
+        GROUP BY COALESCE(NULLIF(user_id, ''), username)
+        ORDER BY total_tokens DESC, call_count DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

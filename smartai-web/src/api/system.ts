@@ -2,91 +2,162 @@ import { request } from './http';
 import type { PageQuery, PageResult } from './types';
 
 /**
- * 系统管理 API（用户/角色/菜单/部门/日志），对应 smartai-server 的 Sys*Controller。
- * 契约：request 已统一解析 Result<T> 并返回 data；分页接口返回 { list, total }。
+ * 系统管理 API（用户/角色/菜单/部门/日志/令牌），对应 smartai-server 的 Sys*Controller。
+ * 契约：更新类接口统一为 PUT 资源根路径且请求体携带 id；列表接口返回 { list, total } 或数组。
  */
 
-/** 用户记录（字段随后端扩展，仅约束主键） */
 export interface SysUserRecord {
-  id: number | string;
+  id: string;
+  username: string;
+  password?: string;
+  realName?: string;
+  gender?: string;
+  phone?: string;
+  email?: string;
+  deptId?: string;
+  avatar?: string;
+  isEnabled?: boolean;
+  createTime?: string;
   [key: string]: unknown;
 }
 
-/** 角色记录 */
 export interface SysRoleRecord {
-  id: number | string;
-  [key: string]: unknown;
-}
-
-/** 部门记录 */
-export interface SysDeptRecord {
-  id: number | string;
-  [key: string]: unknown;
-}
-
-/** 操作日志记录 */
-export interface SysLogRecord {
-  id: number | string;
-  [key: string]: unknown;
-}
-
-/** 菜单记录：字段命名对齐后端 MenuVO（orderNo / isExt / isShow） */
-export interface SysMenuRecord {
-  id: number | string;
+  id: string;
   name: string;
-  parentId?: number | string | null;
+  code: string;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface SysDeptRecord {
+  id: string;
+  parentId?: string | null;
+  name: string;
+  sortOrder?: number;
+  description?: string;
+  [key: string]: unknown;
+}
+
+export interface SysLogRecord {
+  id: string;
+  resultStatus?: number;
+  username?: string;
+  operation?: string;
+  url?: string;
+  durationMs?: number;
+  method?: string;
+  requestParams?: string;
+  ip?: string;
+  userAgent?: string;
+  createTime?: string;
+  [key: string]: unknown;
+}
+
+/** 菜单记录：字段与后端 SysMenu 对齐 */
+export interface SysMenuRecord {
+  id: string;
+  name: string;
+  parentId?: string | null;
   path?: string;
   perms?: string;
   type: string;
-  orderNo?: number;
+  sortOrder?: number;
   icon?: string;
   component?: string;
-  isDisabled?: number;
-  isExt?: number;
-  isKeepalive?: number;
-  isShow?: number;
+  isDisabled?: boolean | number;
+  isExternal?: boolean | number;
+  isKeepalive?: boolean | number;
+  isVisible?: boolean | number;
+  [key: string]: unknown;
 }
 
-/** 标准 CRUD 五件套：由资源根路径生成，列表统一走分页查询 */
-function createSystemApi<T extends { id: number | string }>(base: string) {
+type ListResponse<T> = { list?: T[]; total?: number };
+
+/** 后端列表可能是数组或 { list, total }，统一成 PageResult */
+export function toPageResult<T>(data: T[] | ListResponse<T>): PageResult<T> {
+  if (Array.isArray(data)) return { list: data, total: data.length };
+  const list = data.list ?? [];
+  return { list, total: data.total ?? list.length };
+}
+
+/** 标准 CRUD：新增 POST 根路径，更新 PUT 根路径（body 带 id），删除 DELETE /{id} */
+function createCrudApi<T extends { id: string }>(base: string) {
   return {
-    list: (params?: PageQuery) => request<PageResult<T>>(base, { params }),
-    getById: (id: number | string) => request<T>(`${base}/${id}`),
-    create: (data: Partial<T>) => request<unknown>(base, { method: 'POST', body: data }),
-    update: (id: number | string, data: Partial<T>) =>
-      request<unknown>(`${base}/${id}`, { method: 'PUT', body: data }),
-    delete: (id: number | string) => request<unknown>(`${base}/${id}`, { method: 'DELETE' }),
+    list: async (params?: PageQuery) =>
+      toPageResult(await request<T[] | ListResponse<T>>(base, { params })),
+    getById: (id: string) => request<T>(`${base}/${id}`),
+    create: (data: object) => request<T>(base, { method: 'POST', body: data }),
+    /** 支持 update(data)、update(id, data) 两种写法 */
+    update: (idOrData: string | number | object, data?: object) => {
+      const body =
+        typeof idOrData === 'string' || typeof idOrData === 'number'
+          ? { ...data, id: idOrData }
+          : idOrData;
+      return request<T>(base, { method: 'PUT', body });
+    },
+    delete: (id: string) => request<unknown>(`${base}/${id}`, { method: 'DELETE' }),
   };
 }
 
-/** 用户管理：CRUD + 按用户查角色 */
 export const userApi = {
-  ...createSystemApi<SysUserRecord>('/api/sys/user'),
-  listByUserId: (userId: number | string) =>
-    request<PageResult<SysRoleRecord>>(`/api/sys/user/${userId}`),
+  ...createCrudApi<SysUserRecord>('/api/sys/user'),
+  /** 重置密码 */
+  resetPassword: (id: string, password: string) =>
+    request<unknown>(`/api/sys/user/${id}/password`, { method: 'PUT', body: { password } }),
+  /** 分配角色 */
+  assignRoles: (id: string, roleIds: string[]) =>
+    request<unknown>(`/api/sys/user/${id}/roles`, { method: 'PUT', body: roleIds }),
 };
 
-/** 角色管理：CRUD + 按用户查已授权角色 */
+export interface SysUserRoleRecord {
+  userId: string;
+  roleId: string;
+}
+
 export const roleApi = {
-  ...createSystemApi<SysRoleRecord>('/api/sys/role'),
-  listByUserId: (userId: number | string) =>
-    request<PageResult<SysRoleRecord>>(`/api/sys/role/user/${userId}`),
+  ...createCrudApi<SysRoleRecord>('/api/sys/role'),
+  /** 按用户查已授权角色（返回数组） */
+  listByUserId: (userId: string) => request<SysRoleRecord[]>(`/api/sys/role/user/${userId}`),
+  /** 批量查用户-角色关系 */
+  listUserRoles: (userIds: string[]) =>
+    request<SysUserRoleRecord[]>('/api/sys/role/user-roles', {
+      params: userIds.length ? { userIds: userIds.join(',') } : undefined,
+    }),
+  /** 保存角色菜单授权 */
+  assignMenus: (id: string, menuIds: string[]) =>
+    request<unknown>(`/api/sys/role/${id}/menus`, { method: 'PUT', body: menuIds }),
 };
 
-/** 菜单管理：CRUD + 按角色/用户查授权菜单 */
 export const menuApi = {
-  ...createSystemApi<SysMenuRecord>('/api/sys/menu'),
-  listByRoleId: (roleId: number | string) =>
-    request<PageResult<SysMenuRecord>>(`/api/sys/menu/role/${roleId}`),
-  listByUserId: (userId: number | string) =>
-    request<PageResult<SysMenuRecord>>(`/api/sys/menu/user/${userId}`),
+  ...createCrudApi<SysMenuRecord>('/api/sys/menu'),
+  /** 角色已授权菜单（数组） */
+  listByRoleId: (roleId: string) => request<SysMenuRecord[]>(`/api/sys/menu/role/${roleId}`),
+  /** 用户可见菜单（数组） */
+  listByUserId: (userId: string) => request<SysMenuRecord[]>(`/api/sys/menu/user/${userId}`),
 };
 
-/** 部门管理：标准 CRUD（树形数据由页面自行组装） */
-export const deptApi = createSystemApi<SysDeptRecord>('/api/sys/dept');
+export const deptApi = createCrudApi<SysDeptRecord>('/api/sys/dept');
 
-/** 日志管理：CRUD + 清空全部 */
 export const logApi = {
-  ...createSystemApi<SysLogRecord>('/api/sys/log'),
+  ...createCrudApi<SysLogRecord>('/api/sys/log'),
   deleteAll: () => request<unknown>('/api/sys/log/all', { method: 'DELETE' }),
+};
+
+export interface SysTokenRecord {
+  id: string;
+  token: string;
+  account?: string;
+  expireTime?: string;
+  createTime?: string;
+  [key: string]: unknown;
+}
+
+export const tokenApi = {
+  list: async (account?: string) =>
+    toPageResult(
+      await request<SysTokenRecord[] | ListResponse<SysTokenRecord>>('/api/sys/token', {
+        params: { account },
+      }),
+    ),
+  delete: (id: string) => request<unknown>(`/api/sys/token/${id}`, { method: 'DELETE' }),
 };

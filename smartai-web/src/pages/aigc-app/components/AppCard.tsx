@@ -1,6 +1,5 @@
 import { EllipsisOutlined } from '@ant-design/icons';
 import { App, Dropdown, type MenuProps, Typography } from 'antd';
-import { modelOptions } from '../mockData';
 import type { AIApp } from '../types';
 
 const { Paragraph } = Typography;
@@ -14,7 +13,7 @@ export interface AppCardProps {
 
 export default function AppCard({ app, onOpen, onEdit, onDelete }: AppCardProps) {
   const { modal } = App.useApp();
-  const modelLabel = modelOptions.find((item) => item.value === app.model)?.label ?? app.model;
+  const modelLabel = app.modelName ?? (app.model || '-');
 
   const items: MenuProps['items'] = [
     {

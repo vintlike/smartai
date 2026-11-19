@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AigcMessageMapper">
+
+    <resultMap id="messageMap" type="com.smartai.entity.AigcMessage">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="conversation_id" property="conversationId"/>
+        <result column="username" property="username"/>
+        <result column="ip" property="ip"/>
+        <result column="role" property="role"/>
+        <result column="model" property="model"/>
+        <result column="content" property="content"/>
+        <result column="total_tokens" property="totalTokens"/>
+        <result column="prompt_tokens" property="promptTokens"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="columns">
+        id, user_id, conversation_id, username, ip, role, model, content, total_tokens, prompt_tokens, create_time
+    </sql>
+
+    <sql id="listCondition">
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="username != null and username != ''">
+                AND (username LIKE CONCAT('%', #{username}, '%') OR user_id LIKE CONCAT('%', #{username}, '%'))
+            </if>
+            <if test="role != null and role != ''">
+                AND role = #{role}
+            </if>
+            <if test="model != null and model != ''">
+                AND model LIKE CONCAT('%', #{model}, '%')
+            </if>
+            <if test="conversationId != null and conversationId != ''">
+                AND conversation_id = #{conversationId}
+            </if>
+            <if test="startTime != null">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time &lt; #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <sql id="billingCondition">
+        <where>
+            role = 'assistant'
+            <if test="username != null and username != ''">
+                AND (username LIKE CONCAT('%', #{username}, '%') OR user_id LIKE CONCAT('%', #{username}, '%'))
+            </if>
+            <if test="model != null and model != ''">
+                AND model LIKE CONCAT('%', #{model}, '%')
+            </if>
+            <if test="startTime != null">
+                AND create_time &gt;= #{startTime}
+            </if>
+            <if test="endTime != null">
+                AND create_time &lt; #{endTime}
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectById" resultMap="messageMap">
+        SELECT <include refid="columns"/> FROM aigc_message WHERE id = #{id}
+    </select>
+
+    <select id="selectByConversationId" resultMap="messageMap">
+        SELECT <include refid="columns"/> FROM aigc_message
+        WHERE conversation_id = #{conversationId}
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="selectList" resultMap="messageMap">
+        SELECT <include refid="columns"/> FROM aigc_message
+        <include refid="listCondition"/>
+        ORDER BY create_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countList" resultType="long">
+        SELECT COUNT(*) FROM aigc_message
+        <include refid="listCondition"/>
+    </select>
+
+    <select id="selectBillingList" resultType="com.smartai.dto.BillingStatDTO">
+        SELECT user_id,
+               username,
+               model,
+               COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens,
+               COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+               GREATEST(COALESCE(SUM(total_tokens - prompt_tokens), 0), 0) AS completion_tokens,
+               MAX(create_time) AS last_call_time
+        FROM aigc_message
+        <include refid="billingCondition"/>
+        GROUP BY user_id, username, model
+        ORDER BY total_tokens DESC, last_call_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countBilling" resultType="long">
+        SELECT COUNT(*) FROM (
+            SELECT user_id, username, model
+            FROM aigc_message
+            <include refid="billingCondition"/>
+            GROUP BY user_id, username, model
+        ) t
+    </select>
+
+    <select id="selectBillingSummary" resultType="com.smartai.dto.BillingSummaryDTO">
+        SELECT COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens,
+               COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+               GREATEST(COALESCE(SUM(total_tokens - prompt_tokens), 0), 0) AS completion_tokens,
+               COUNT(DISTINCT COALESCE(NULLIF(user_id, ''), username)) AS user_count,
+               COUNT(DISTINCT model) AS model_count
+        FROM aigc_message
+        <include refid="billingCondition"/>
+    </select>
+
+    <select id="selectBillingTrend" resultType="com.smartai.dto.BillingTrendDTO">
+        SELECT DATE(create_time) AS stat_date,
+               COUNT(*) AS call_count,
+               COALESCE(SUM(total_tokens), 0) AS total_tokens,
+               COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+               GREATEST(COALESCE(SUM(total_tokens - prompt_tokens), 0), 0) AS completion_tokens
+        FROM aigc_message
+        <include refid="billingCondition"/>
+        GROUP BY DATE(create_time)
+        ORDER BY stat_date ASC
+    </select>
+
+    <insert id="insert">
+        INSERT INTO aigc_message (<include refid="columns"/>)
+        VALUES (#{id}, #{userId}, #{conversationId}, #{username}, #{ip}, #{role}, #{model}, #{content},
+                #{totalTokens}, #{promptTokens}, #{createTime})
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM aigc_message WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByConversationId">
+        DELETE FROM aigc_message WHERE conversation_id = #{conversationId}
+    </delete>
+</mapper>

@@ -1,36 +1,67 @@
 import { PlusOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Pagination } from 'antd';
-import { useMemo, useState } from 'react';
+import { App, Button, Card, Empty, Pagination } from 'antd';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import type { EmbedStoreRecord, KnowledgeRecord, ModelRecord } from '@/api/aigc';
+import { embedStoreApi, knowledgeApi, modelApi } from '@/api/aigc';
 import type { QueryParams } from '@/api/types';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import KnowledgeCard from './components/KnowledgeCard';
 import KnowledgeFormModal, { type KnowledgeFormValues } from './components/KnowledgeFormModal';
-import { mockEmbeddingModels, mockKnowledgeBases, mockVectorDBs } from './mockData';
 import type { KnowledgeBaseItem } from './types';
 
 const PAGE_SIZE = 12;
 
-function formatNow(): string {
-  return new Date()
-    .toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    .replace(/\//g, '-');
-}
-
 export default function KnowledgeManage() {
+  const { message } = App.useApp();
   const navigate = useNavigate();
-  const [knowledgeList, setKnowledgeList] = useState<KnowledgeBaseItem[]>(mockKnowledgeBases);
+  const [knowledgeList, setKnowledgeList] = useState<KnowledgeBaseItem[]>([]);
+  const [stores, setStores] = useState<EmbedStoreRecord[]>([]);
+  const [models, setModels] = useState<ModelRecord[]>([]);
   const [query, setQuery] = useState<QueryParams>({});
   const [current, setCurrent] = useState(1);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<KnowledgeBaseItem | null>(null);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [knowledgeResult, storeResult, modelResult] = await Promise.all([
+        knowledgeApi.list({ pageSize: 100 }),
+        embedStoreApi.list({ pageSize: 100 }),
+        modelApi.list({ type: 'embedding', pageSize: 100 }),
+      ]);
+      setStores(storeResult.list);
+      setModels(modelResult.list);
+      setKnowledgeList(
+        knowledgeResult.list.map((record: KnowledgeRecord) => ({
+          id: record.id,
+          name: record.name,
+          description: record.description ?? '',
+          vectorDb:
+            record.embedStoreName ??
+            storeResult.list.find((item) => item.id === record.embedStoreId)?.name ??
+            '',
+          embeddingModel:
+            record.embedModelName ??
+            modelResult.list.find((item) => item.id === record.embedModelId)?.name ??
+            '',
+          embedStoreId: record.embedStoreId,
+          embedModelId: record.embedModelId,
+          docCount: record.docCount ?? 0,
+          totalSize: record.totalSize ?? 0,
+          createdAt: record.createTime ?? '',
+          createdBy: record.username ?? '',
+        })),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '知识库加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredList = useMemo(() => {
     const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
@@ -73,27 +104,37 @@ export default function KnowledgeManage() {
     setModalOpen(true);
   };
 
-  const handleSubmit = (values: KnowledgeFormValues) => {
-    if (editing) {
-      setKnowledgeList((prev) =>
-        prev.map((item) => (item.id === editing.id ? { ...item, ...values } : item)),
-      );
-    } else {
-      const newKnowledge: KnowledgeBaseItem = {
-        id: String(Date.now()),
+  const handleSubmit = async (values: KnowledgeFormValues) => {
+    try {
+      const payload = {
         name: values.name,
         description: values.description,
-        vectorDb: values.vectorDb,
-        embeddingModel: values.embeddingModel,
-        docCount: 0,
-        totalSize: 0,
-        createdAt: formatNow(),
-        createdBy: '当前用户',
+        embedStoreId: values.vectorDb,
+        embedModelId: values.embeddingModel,
       };
-      setKnowledgeList((prev) => [newKnowledge, ...prev]);
+      if (editing) {
+        await knowledgeApi.update({ ...payload, id: editing.id });
+        message.success('知识库已保存');
+      } else {
+        await knowledgeApi.create(payload);
+        message.success('知识库已创建');
+      }
+      setModalOpen(false);
+      setEditing(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存知识库失败');
     }
-    setModalOpen(false);
-    setEditing(null);
+  };
+
+  const handleDelete = async (item: KnowledgeBaseItem) => {
+    try {
+      await knowledgeApi.delete(item.id);
+      message.success('删除成功');
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '删除失败');
+    }
   };
 
   return (
@@ -128,16 +169,16 @@ export default function KnowledgeManage() {
             label: '向量库',
             type: 'select',
             width: 180,
-            options: mockVectorDBs.map((item) => ({ value: item.alias, label: item.alias })),
+            options: stores.map((item) => ({ value: item.name, label: item.name })),
           },
           {
             name: 'embeddingModel',
             label: '向量化模型',
             type: 'select',
             width: 200,
-            options: mockEmbeddingModels.map((item) => ({
-              value: `${item.name} - ${item.alias}`,
-              label: `${item.name} - ${item.alias}`,
+            options: models.map((item) => ({
+              value: item.name,
+              label: item.name,
             })),
           },
         ]}
@@ -162,9 +203,7 @@ export default function KnowledgeManage() {
             knowledge={knowledge}
             onOpen={(item) => navigate(`/aigc-platform/knowledge/${item.id}`)}
             onEdit={openEdit}
-            onDelete={(item) =>
-              setKnowledgeList((prev) => prev.filter((entry) => entry.id !== item.id))
-            }
+            onDelete={handleDelete}
           />
         ))}
       </div>
@@ -180,6 +219,8 @@ export default function KnowledgeManage() {
       <KnowledgeFormModal
         open={modalOpen}
         knowledge={editing}
+        vectorDbOptions={stores.map((item) => ({ value: item.id, label: item.name }))}
+        embeddingModelOptions={models.map((item) => ({ value: item.id, label: item.name }))}
         onCancel={() => {
           setModalOpen(false);
           setEditing(null);

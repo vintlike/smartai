@@ -6,7 +6,7 @@ import {
   RiseOutlined,
   UserOutlined,
 } from '@ant-design/icons';
-import { Card, Col, Row, Statistic } from 'antd';
+import { App, Card, Col, Row, Statistic } from 'antd';
 import { LineChart } from 'echarts/charts';
 import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/components';
 import * as echarts from 'echarts/core';
@@ -14,23 +14,19 @@ import { CanvasRenderer } from 'echarts/renderers';
 // 注：echarts-for-react 3.1.0 起 exports 只暴露 lib/*；lib/core 在 ESM 条件下会解析到
 // esm/core.js，因此不会遇到 CJS default 互操作问题（不要再直接写已不存在的 esm/core 子路径）
 import ReactEChartsCore from 'echarts-for-react/lib/core';
+import { useCallback, useEffect, useState } from 'react';
+import type { DashboardOverviewRecord, DashboardTrendRecord } from '@/api/aigc';
+import { dashboardApi } from '@/api/aigc';
 import PageContainer from '@/components/PageContainer';
 import { chartColors, useThemeMode } from '@/framework';
 
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
-/** Token消耗量 - 近7天趋势数据 */
-const tokenChartData = {
-  dates: ['07-16', '07-17', '07-18', '07-19', '07-20', '07-21', '07-22'],
-  inputTokens: [320000, 410000, 380000, 520000, 480000, 390000, 460000],
-  outputTokens: [180000, 250000, 210000, 310000, 280000, 220000, 270000],
-};
-
-/** AI请求量 - 近7天趋势数据 */
-const requestChartData = {
-  dates: ['07-16', '07-17', '07-18', '07-19', '07-20', '07-21', '07-22'],
-  requests: [1620, 2100, 1850, 2480, 2300, 1920, 2180],
-};
+/** 环比变化，分母为 0 时视为全新增长 */
+function percentChange(current: number, previous: number): number {
+  if (!previous) return current ? 100 : 0;
+  return Number((((current - previous) / previous) * 100).toFixed(1));
+}
 
 /** 格式化数字，添加千分位 */
 function formatNumber(value: number): string {
@@ -100,58 +96,104 @@ function buildAreaOption(dates: string[], series: ChartSeries[], isDark: boolean
 }
 
 export default function Dashboard() {
+  const { message } = App.useApp();
   const { isDark } = useThemeMode();
+  const [overview, setOverview] = useState<DashboardOverviewRecord | null>(null);
+  const [trend, setTrend] = useState<DashboardTrendRecord[]>([]);
+
+  const loadData = useCallback(async () => {
+    try {
+      const [overviewResult, trendResult] = await Promise.all([
+        dashboardApi.overview(7),
+        dashboardApi.trend(7),
+      ]);
+      setOverview(overviewResult);
+      setTrend(trendResult);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '看板数据加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const current = overview?.current ?? {};
+  const previous = overview?.previous ?? {};
+  const assets = overview?.assets ?? {};
 
   /** 统计卡片数据 */
   const stats = [
     {
       title: 'LLM请求量',
-      value: 12846,
+      value: Number(current.callCount ?? 0),
       suffix: '次',
       icon: <MessageOutlined />,
-      trend: 12.5,
+      trend: percentChange(Number(current.callCount ?? 0), Number(previous.callCount ?? 0)),
       color: chartColors[0],
     },
     {
       title: 'Token消耗量',
-      value: 3562800,
+      value: Number(current.totalTokens ?? 0),
       suffix: '',
       icon: <RiseOutlined />,
-      trend: 8.3,
+      trend: percentChange(Number(current.totalTokens ?? 0), Number(previous.totalTokens ?? 0)),
       color: chartColors[1],
     },
     {
       title: '用户增长量',
-      value: 256,
+      value: Number(overview?.newUserCount ?? 0),
       suffix: '人',
       icon: <UserOutlined />,
-      trend: 15.2,
+      trend: percentChange(
+        Number(overview?.newUserCount ?? 0),
+        Number(overview?.newUserCountPrev ?? 0),
+      ),
       color: chartColors[3],
     },
     {
       title: '知识库数量',
-      value: 48,
+      value: Number(overview?.knowledgeCount ?? assets.knowledgeCount ?? 0),
       suffix: '个',
       icon: <DatabaseOutlined />,
-      trend: -2.1,
+      trend: percentChange(
+        Number(overview?.knowledgeCount ?? 0),
+        Number(overview?.knowledgeCountPrev ?? 0),
+      ),
       color: chartColors[4],
     },
   ];
 
+  const dates = trend.map((item) => (item.statDate ?? '').slice(5));
+
   /** Token消耗量图表配置 */
   const tokenOption = buildAreaOption(
-    tokenChartData.dates,
+    dates,
     [
-      { name: '输入Token', color: chartColors[0], data: tokenChartData.inputTokens },
-      { name: '输出Token', color: chartColors[1], data: tokenChartData.outputTokens },
+      {
+        name: '输入Token',
+        color: chartColors[0],
+        data: trend.map((item) => Number(item.promptTokens ?? 0)),
+      },
+      {
+        name: '输出Token',
+        color: chartColors[1],
+        data: trend.map((item) => Number(item.completionTokens ?? 0)),
+      },
     ],
     isDark,
   );
 
   /** AI请求量图表配置 */
   const requestOption = buildAreaOption(
-    requestChartData.dates,
-    [{ name: '请求量', color: chartColors[3], data: requestChartData.requests }],
+    dates,
+    [
+      {
+        name: '请求量',
+        color: chartColors[3],
+        data: trend.map((item) => Number(item.callCount ?? 0)),
+      },
+    ],
     isDark,
   );
 

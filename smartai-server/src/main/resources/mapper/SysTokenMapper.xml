@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.SysTokenMapper">
+
+    <resultMap id="tokenMap" type="com.smartai.entity.SysToken">
+        <id column="id" property="id"/>
+        <result column="token" property="token"/>
+        <result column="account" property="account"/>
+        <result column="expire_time" property="expireTime"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <select id="selectList" resultMap="tokenMap">
+        SELECT id, token, account, expire_time, create_time FROM sys_token
+        <where>
+            <if test="account != null and account != ''">
+                AND account LIKE CONCAT('%', #{account}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <delete id="deleteById">
+        DELETE FROM sys_token WHERE id = #{id}
+    </delete>
+</mapper>

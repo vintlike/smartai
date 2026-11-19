@@ -69,7 +69,7 @@ function notifyUnauthorized(): void {
   window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
 }
 
-function resolveUrl(path: string, params?: QueryParams): string {
+export function resolveUrl(path: string, params?: QueryParams): string {
   const url = `${BASE_URL}${path}`;
   if (!params) return url;
   const query = Object.entries(params)
@@ -92,7 +92,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
     method,
     headers: {
       ...(body === undefined ? {} : { 'Content-Type': 'application/json' }),
-      ...(token ? { Authorization: token } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },
     body: body === undefined ? undefined : typeof body === 'string' ? body : JSON.stringify(body),

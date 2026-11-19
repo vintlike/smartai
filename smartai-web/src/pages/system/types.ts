@@ -1,5 +1,5 @@
 export interface LogItem {
-  id: number;
+  id: string;
   username: string;
   status: 'success' | 'fail';
   description: string;
@@ -11,7 +11,7 @@ export interface LogItem {
 }
 
 export interface TokenItem {
-  id: number;
+  id: string;
   token: string;
   account: string;
   expireTime: string;

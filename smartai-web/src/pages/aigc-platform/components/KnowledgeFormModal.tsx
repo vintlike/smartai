@@ -1,6 +1,5 @@
 import { Form, Input, Modal, Select } from 'antd';
 import { useEffect } from 'react';
-import { mockEmbeddingModels, mockVectorDBs } from '../mockData';
 import type { KnowledgeBaseItem } from '../types';
 
 export interface KnowledgeFormValues {
@@ -10,9 +9,16 @@ export interface KnowledgeFormValues {
   description: string;
 }
 
+interface SelectOption {
+  value: string;
+  label: string;
+}
+
 export interface KnowledgeFormModalProps {
   open: boolean;
   knowledge?: KnowledgeBaseItem | null;
+  vectorDbOptions: SelectOption[];
+  embeddingModelOptions: SelectOption[];
   onCancel: () => void;
   onSubmit: (values: KnowledgeFormValues) => void;
 }
@@ -20,6 +26,8 @@ export interface KnowledgeFormModalProps {
 export default function KnowledgeFormModal({
   open,
   knowledge,
+  vectorDbOptions,
+  embeddingModelOptions,
   onCancel,
   onSubmit,
 }: KnowledgeFormModalProps) {
@@ -30,8 +38,8 @@ export default function KnowledgeFormModal({
     if (knowledge) {
       form.setFieldsValue({
         name: knowledge.name,
-        vectorDb: knowledge.vectorDb,
-        embeddingModel: knowledge.embeddingModel,
+        vectorDb: knowledge.embedStoreId ?? knowledge.vectorDb,
+        embeddingModel: knowledge.embedModelId ?? knowledge.embeddingModel,
         description: knowledge.description,
       });
     } else {
@@ -68,23 +76,14 @@ export default function KnowledgeFormModal({
           label="向量数据库"
           rules={[{ required: true, message: '请选择向量数据库' }]}
         >
-          <Select
-            placeholder="请选择向量数据库"
-            options={mockVectorDBs.map((item) => ({ value: item.alias, label: item.alias }))}
-          />
+          <Select placeholder="请选择向量数据库" options={vectorDbOptions} />
         </Form.Item>
         <Form.Item
           name="embeddingModel"
           label="向量模型"
           rules={[{ required: true, message: '请选择向量模型' }]}
         >
-          <Select
-            placeholder="请选择向量模型"
-            options={mockEmbeddingModels.map((item) => ({
-              value: `${item.name} - ${item.alias}`,
-              label: `${item.name} - ${item.alias}`,
-            }))}
-          />
+          <Select placeholder="请选择向量模型" options={embeddingModelOptions} />
         </Form.Item>
         <Form.Item
           name="description"

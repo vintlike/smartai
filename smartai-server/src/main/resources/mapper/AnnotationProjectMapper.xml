@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AnnotationProjectMapper">
+
+    <resultMap id="projectMap" type="com.smartai.entity.AnnotationProject">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="status" property="status"/>
+        <result column="create_time" property="createTime"/>
+    </resultMap>
+
+    <sql id="columns">id, name, description, status, create_time</sql>
+
+    <select id="selectById" resultMap="projectMap">
+        SELECT <include refid="columns"/> FROM annotation_project WHERE id = #{id}
+    </select>
+
+    <select id="selectByName" resultMap="projectMap">
+        SELECT <include refid="columns"/> FROM annotation_project WHERE name = #{name}
+    </select>
+
+    <select id="selectList" resultMap="projectMap">
+        SELECT <include refid="columns"/> FROM annotation_project
+        <where>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+        </where>
+        ORDER BY create_time DESC
+    </select>
+
+    <insert id="insert">
+        INSERT INTO annotation_project (<include refid="columns"/>)
+        VALUES (#{id}, #{name}, #{description}, #{status}, #{createTime})
+    </insert>
+
+    <update id="updateById">
+        UPDATE annotation_project
+        <set>
+            id = #{id},
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="status != null">status = #{status},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM annotation_project WHERE id = #{id}
+    </delete>
+</mapper>

@@ -101,7 +101,7 @@ function toMenuItem(record: SysMenuRecord): MenuItem {
   return {
     id: String(record.id),
     parentId:
-      record.parentId === null || record.parentId === undefined
+      record.parentId === null || record.parentId === undefined || record.parentId === '0'
         ? undefined
         : String(record.parentId),
     name: String(record.name ?? ''),
@@ -110,10 +110,10 @@ function toMenuItem(record: SysMenuRecord): MenuItem {
       type === 'button' || type === 'btn' ? 'button' : type === 'catalog' ? 'catalog' : 'menu',
     component: record.component || undefined,
     icon: record.icon || undefined,
-    order: Number(record.orderNo ?? 0),
+    order: Number(record.sortOrder ?? 0),
     perms: record.perms || undefined,
     status: Number(record.isDisabled ?? 0) === 1 ? 0 : 1,
-    external: Number(record.isExt ?? 0) === 1,
+    external: Number(record.isExternal ?? 0) === 1,
     keepalive: Number(record.isKeepalive ?? 0) === 1,
   };
 }
@@ -371,11 +371,11 @@ export default function MenuManage() {
       path: values.path,
       perms: values.perms,
       type: values.menuType,
-      orderNo: values.order,
+      sortOrder: values.order,
       icon: values.icon,
       component: values.component,
       isDisabled: values.status ? 0 : 1,
-      isExt: values.external ? 1 : 0,
+      isExternal: values.external ? 1 : 0,
       isKeepalive: values.keepalive ? 1 : 0,
     };
     try {

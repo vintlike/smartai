@@ -1,7 +1,8 @@
-import { PlusOutlined } from '@ant-design/icons';
-import { App, Button, Form, Input, Modal, Popconfirm, Select, Tag, Typography } from 'antd';
+import { App, Button, Popconfirm, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SysTokenRecord } from '@/api/system';
+import { tokenApi } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
@@ -9,41 +10,7 @@ import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
 import type { TokenItem } from './types';
 
-const { Paragraph, Text } = Typography;
-
-const expireOptions = [
-  { value: 30, label: '30 天' },
-  { value: 90, label: '90 天' },
-  { value: 180, label: '180 天' },
-  { value: 365, label: '365 天' },
-];
-
-interface TokenFormValues {
-  account: string;
-  days: number;
-}
-
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function formatTime(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
-function createRandomToken(): string {
-  const randomSegment = () => Math.random().toString(36).slice(2, 20);
-  return `sk-${randomSegment()}${randomSegment()}`;
-}
-
-function createTokens(): TokenItem[] {
-  return Array.from({ length: 46 }, (_, index) => ({
-    id: index + 1,
-    token: createRandomToken(),
-    account: `user${index + 1}@example.com`,
-    expireTime: formatTime(new Date(Date.now() + (index + 1) * 30 * 86400000)),
-  }));
-}
+const { Text } = Typography;
 
 function maskToken(token: string): string {
   if (token.length <= 14) return token;
@@ -55,14 +22,34 @@ function isExpired(expireTime: string): boolean {
   return Number.isNaN(parsed.getTime()) ? false : parsed.getTime() < Date.now();
 }
 
+function toTokenItem(record: SysTokenRecord): TokenItem {
+  return {
+    id: record.id,
+    token: record.token ?? '',
+    account: record.account ?? '',
+    expireTime: record.expireTime ?? '',
+  };
+}
+
 export default function TokenManage() {
-  const { message, modal } = App.useApp();
-  const [tokens, setTokens] = useState<TokenItem[]>(createTokens);
-  const [createOpen, setCreateOpen] = useState(false);
+  const { message } = App.useApp();
+  const [tokens, setTokens] = useState<TokenItem[]>([]);
   const [query, setQuery] = useState<QueryParams>({});
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
-  const [form] = Form.useForm<TokenFormValues>();
+
+  const loadData = useCallback(async () => {
+    try {
+      const result = await tokenApi.list();
+      setTokens(result.list.map(toTokenItem));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '令牌列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredTokens = useMemo(() => {
     const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
@@ -82,37 +69,6 @@ export default function TokenManage() {
   const handleResetSearch = () => {
     setQuery({});
     setPageState(1);
-  };
-
-  const openCreate = () => {
-    form.resetFields();
-    form.setFieldsValue({ days: 30 });
-    setCreateOpen(true);
-  };
-
-  const handleCreate = async () => {
-    const values = await form.validateFields();
-    const token = createRandomToken();
-    const expireTime = formatTime(new Date(Date.now() + values.days * 86400000));
-    setTokens((prev) => [{ id: Date.now(), token, account: values.account, expireTime }, ...prev]);
-    setCreateOpen(false);
-    setPageState(1);
-    modal.success({
-      title: '令牌创建成功',
-      content: (
-        <div className="pt-2">
-          <div className="mb-1 text-12px text-[var(--ant-color-text-tertiary)]">
-            请立即复制保存，令牌仅展示一次
-          </div>
-          <Paragraph code copyable={{ text: token }} className="mb-1! break-all">
-            {token}
-          </Paragraph>
-          <div className="text-12px text-[var(--ant-color-text-tertiary)]">
-            账户：{values.account} · 过期时间：{expireTime}
-          </div>
-        </div>
-      ),
-    });
   };
 
   const columns: ColumnsType<TokenItem> = [
@@ -147,9 +103,14 @@ export default function TokenManage() {
           okText="删除"
           cancelText="取消"
           okButtonProps={{ danger: true }}
-          onConfirm={() => {
-            setTokens((prev) => prev.filter((item) => item.id !== record.id));
-            message.success('删除成功');
+          onConfirm={async () => {
+            try {
+              await tokenApi.delete(record.id);
+              message.success('删除成功');
+              await loadData();
+            } catch (error) {
+              message.error(error instanceof Error ? error.message : '删除失败');
+            }
           }}
         >
           <Button type="link" size="small" danger>
@@ -160,24 +121,10 @@ export default function TokenManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<TokenItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新会重新生成令牌列表
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setTokens(createTokens());
-    setPageState(1);
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<TokenItem>(columns, loadData);
 
   return (
-    <PageContainer
-      title="令牌管理"
-      contentBordered={false}
-      extra={
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          新增令牌
-        </Button>
-      }
-    >
+    <PageContainer title="令牌管理" contentBordered={false}>
       <SearchBar
         fields={[
           { name: 'keyword', label: '关键字', placeholder: '令牌 / 账户', width: 240 },
@@ -213,40 +160,6 @@ export default function TokenManage() {
           }}
         />
       </div>
-
-      <Modal
-        width={520}
-        destroyOnHidden
-        open={createOpen}
-        title="新增令牌"
-        okText="创建"
-        cancelText="取消"
-        onCancel={() => setCreateOpen(false)}
-        onOk={handleCreate}
-      >
-        <Form form={form} layout="vertical">
-          <Form.Item
-            name="account"
-            label="关联账户"
-            rules={[
-              { required: true, message: '请输入关联账户' },
-              { type: 'email', message: '请输入正确的邮箱地址' },
-            ]}
-          >
-            <Input placeholder="如：developer@example.com" maxLength={60} />
-          </Form.Item>
-          <Form.Item
-            name="days"
-            label="有效期"
-            rules={[{ required: true, message: '请选择有效期' }]}
-          >
-            <Select options={expireOptions} placeholder="请选择有效期" />
-          </Form.Item>
-          <div className="text-12px text-[var(--ant-color-text-tertiary)]">
-            创建后令牌仅完整展示一次，请及时复制保存。
-          </div>
-        </Form>
-      </Modal>
     </PageContainer>
   );
 }

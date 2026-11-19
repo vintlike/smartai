@@ -1,7 +1,8 @@
 import { CopyOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { appApiCredentialApi } from '@/api/aigc';
 import { DataTable } from '@/components/DataTable';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
 
@@ -9,40 +10,6 @@ interface ApiKeyItem {
   id: string;
   key: string;
   createdAt: string;
-}
-
-const initialKeys: ApiKeyItem[] = [
-  {
-    id: 'key-1',
-    key: 'sk-a1b2c3d4e5f6g7h8i9j0',
-    createdAt: '2025-07-02 10:20',
-  },
-  {
-    id: 'key-2',
-    key: 'sk-k1l2m3n4o5p6q7r8s9t0',
-    createdAt: '2025-07-18 16:45',
-  },
-  {
-    id: 'key-3',
-    key: 'sk-u1v2w3x4y5z6a7b8c9d0',
-    createdAt: '2025-08-05 09:12',
-  },
-];
-
-function createKey(): string {
-  return `sk-${Math.random().toString(36).substring(2, 22)}`;
-}
-
-function formatNow(): string {
-  return new Date()
-    .toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    })
-    .replace(/\//g, '-');
 }
 
 interface CodeBlockProps {
@@ -66,15 +33,36 @@ export interface ApiChannelPanelProps {
 
 export default function ApiChannelPanel({ appName, appId }: ApiChannelPanelProps) {
   const { message, modal } = App.useApp();
-  const [keys, setKeys] = useState<ApiKeyItem[]>(initialKeys);
-  const baseUrl = 'https://api.example.com/v1';
+  const [keys, setKeys] = useState<ApiKeyItem[]>([]);
+  const baseUrl = `${window.location.origin}/api/aigc/app-api`;
 
-  const handleCreate = () => {
-    setKeys((prev) => [
-      { id: `key-${Date.now()}`, key: createKey(), createdAt: formatNow() },
-      ...prev,
-    ]);
-    message.success('秘钥创建成功');
+  const loadKeys = useCallback(async () => {
+    try {
+      const list = await appApiCredentialApi.listByAppId(appId);
+      setKeys(
+        list.map((item) => ({
+          id: item.id,
+          key: item.apiKey ?? '',
+          createdAt: item.createTime ?? '-',
+        })),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '秘钥加载失败');
+    }
+  }, [appId, message]);
+
+  useEffect(() => {
+    void loadKeys();
+  }, [loadKeys]);
+
+  const handleCreate = async () => {
+    try {
+      await appApiCredentialApi.create({ appId });
+      message.success('秘钥创建成功');
+      await loadKeys();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '秘钥创建失败');
+    }
   };
 
   const handleCopy = async (value: string) => {
@@ -93,9 +81,14 @@ export default function ApiChannelPanel({ appName, appId }: ApiChannelPanelProps
       okText: '删除',
       okButtonProps: { danger: true },
       cancelText: '取消',
-      onOk: () => {
-        setKeys((prev) => prev.filter((item) => item.id !== record.id));
-        message.success('删除成功');
+      onOk: async () => {
+        try {
+          await appApiCredentialApi.delete(record.id);
+          message.success('删除成功');
+          await loadKeys();
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除失败');
+        }
       },
     });
   };
@@ -143,10 +136,7 @@ export default function ApiChannelPanel({ appName, appId }: ApiChannelPanelProps
     },
   ];
 
-  const toolbar = useTableToolbar<ApiKeyItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为秘钥列表请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
+  const toolbar = useTableToolbar<ApiKeyItem>(columns, loadKeys);
 
   const requestBody = `{
   "model": "${appId}",

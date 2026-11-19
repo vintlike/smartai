@@ -6,12 +6,14 @@ import {
   SendOutlined,
   SettingOutlined,
 } from '@ant-design/icons';
-import { App, Button, Input, Select, Upload } from 'antd';
+import { App, Button, Input, Select, Spin, Upload } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { appApi, type ChatStreamTask, type ModelRecord, modelApi, streamChat } from '@/api/aigc';
 import PageContainer from '@/components/PageContainer';
+import { mapAppRecord, toModelOptions } from './appUtils';
 import ApiChannelPanel from './components/ApiChannelDrawer';
-import { mockApps, modelOptions } from './mockData';
+import type { AIApp } from './types';
 
 interface TestMessage {
   id: string;
@@ -23,52 +25,106 @@ export default function AIAppConfig() {
   const { message } = App.useApp();
   const { appId } = useParams();
   const navigate = useNavigate();
-  const app = mockApps.find((item) => item.id === appId) ?? mockApps[0];
 
+  const [app, setApp] = useState<AIApp | null>(null);
+  const [models, setModels] = useState<ModelRecord[]>([]);
   const [activeView, setActiveView] = useState<'config' | 'api'>('config');
-  const [prompt, setPrompt] = useState(app.prompt);
-  const [model, setModel] = useState(app.model);
+  const [prompt, setPrompt] = useState('');
+  const [model, setModel] = useState('');
   const [testMessages, setTestMessages] = useState<TestMessage[]>([]);
   const [testInput, setTestInput] = useState('');
-  const timerRef = useRef<number | null>(null);
+  const [sending, setSending] = useState(false);
+  const streamRef = useRef<ChatStreamTask | null>(null);
 
   useEffect(() => {
-    setPrompt(app.prompt);
-    setModel(app.model);
-    setTestMessages([]);
-    setTestInput('');
-  }, [app]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const modelResult = await modelApi.list({ type: 'chat', pageSize: 100 });
+        if (cancelled) return;
+        setModels(modelResult.list);
+        if (!appId) return;
+        const record = await appApi.getById(appId);
+        if (cancelled) return;
+        const next = mapAppRecord(record, modelResult.list);
+        setApp(next);
+        setPrompt(next.prompt);
+        setModel(next.model);
+      } catch (error) {
+        if (!cancelled) message.error(error instanceof Error ? error.message : '应用加载失败');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [appId, message]);
 
   useEffect(
     () => () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
+      streamRef.current?.abort();
     },
     [],
   );
 
-  const handleSavePrompt = () => {
-    message.success('提示词已保存');
+  const handleSavePrompt = async () => {
+    if (!app) return;
+    try {
+      await appApi.update({ id: app.id, prompt, modelId: model });
+      setApp({ ...app, prompt, model });
+      message.success('提示词已保存');
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存失败');
+    }
   };
 
   const handleSendTest = () => {
     const value = testInput.trim();
-    if (!value) return;
-    setTestMessages((prev) => [
-      ...prev,
-      { id: `test-${Date.now()}`, role: 'user', content: value },
-    ]);
+    if (!value || !app || sending) return;
+    const userMessage: TestMessage = { id: `test-${Date.now()}`, role: 'user', content: value };
+    const replyId = `test-${Date.now()}-reply`;
+    const history = [...testMessages, userMessage];
+    setTestMessages([...history, { id: replyId, role: 'assistant', content: '' }]);
     setTestInput('');
-    timerRef.current = window.setTimeout(() => {
-      setTestMessages((prev) => [
-        ...prev,
-        {
-          id: `test-${Date.now()}-reply`,
-          role: 'assistant',
-          content: `这是来自「${app.name}」的模拟回复。实际接入后将根据 Prompt 和知识库内容生成回答。`,
+    setSending(true);
+
+    const selectedModel = models.find((item) => item.id === model);
+    const task = streamChat(
+      {
+        model: selectedModel?.model,
+        systemPrompt: prompt,
+        messages: history.map((item) => ({ role: item.role, content: item.content })),
+      },
+      {
+        onDelta: (delta) => {
+          setTestMessages((prev) =>
+            prev.map((item) =>
+              item.id === replyId ? { ...item, content: item.content + delta } : item,
+            ),
+          );
         },
-      ]);
-    }, 800);
+        onError: (errorMessage) => {
+          message.error(errorMessage);
+          setSending(false);
+        },
+        onDone: () => setSending(false),
+      },
+    );
+    streamRef.current = task;
+    task.done.catch((error: unknown) => {
+      setSending(false);
+      message.error(error instanceof Error ? error.message : '测试对话失败');
+    });
   };
+
+  if (!app) {
+    return (
+      <PageContainer className="flex flex-col h-full" title="应用配置" contentBordered={false}>
+        <div className="flex justify-center py-20">
+          <Spin />
+        </div>
+      </PageContainer>
+    );
+  }
 
   return (
     <PageContainer
@@ -131,7 +187,7 @@ export default function AIAppConfig() {
               className="w-full"
               value={model}
               onChange={(value) => setModel(value)}
-              options={modelOptions}
+              options={toModelOptions(models)}
             />
             <div className="text-14px font-600 mt-4 mb-2">知识库</div>
             <div className="text-12px text-[var(--ant-color-text-secondary)] mb-3">
@@ -176,7 +232,7 @@ export default function AIAppConfig() {
                           : 'bg-[var(--ant-color-bg-text-secondary)]'
                       }`}
                     >
-                      {item.content}
+                      {item.content || '正在思考...'}
                     </div>
                   </div>
                 ))
@@ -194,7 +250,7 @@ export default function AIAppConfig() {
                   type="primary"
                   size="small"
                   icon={<SendOutlined />}
-                  disabled={!testInput.trim()}
+                  disabled={!testInput.trim() || sending}
                   onClick={handleSendTest}
                 >
                   发送

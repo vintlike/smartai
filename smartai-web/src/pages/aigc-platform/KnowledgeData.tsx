@@ -23,14 +23,15 @@ import {
   Upload,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import type { DocsRecord, DocsSliceRecord, KnowledgeRecord } from '@/api/aigc';
+import { docsApi, knowledgeApi } from '@/api/aigc';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
 import { formatSize } from './components/KnowledgeCard';
-import { mockKnowledgeBases, mockKnowledgeDocuments, mockKnowledgeSlices } from './mockData';
-import type { KnowledgeDocumentItem, KnowledgeSliceItem } from './types';
+import type { KnowledgeBaseItem, KnowledgeDocumentItem, KnowledgeSliceItem } from './types';
 
 const { Text, Title, Paragraph } = Typography;
 
@@ -40,9 +41,6 @@ type ImportMode = 'upload' | 'manual';
 interface SearchHit extends KnowledgeSliceItem {
   score: number;
 }
-
-/** 示例文档的初始体积，用于把文档增删折算回知识库自身的数据总量口径 */
-const INITIAL_DOC_SIZE = mockKnowledgeDocuments.reduce((sum, item) => sum + item.fileSize, 0);
 
 /**
  * 相似度计算：按关键词去重字符在切片内容中的命中率估算，
@@ -56,16 +54,31 @@ function scoreSlice(content: string, keyword: string): number {
   return hit / chars.length;
 }
 
+function toKnowledgeItem(record: KnowledgeRecord): KnowledgeBaseItem {
+  return {
+    id: record.id,
+    name: record.name,
+    description: record.description ?? '',
+    vectorDb: record.embedStoreName ?? '',
+    embeddingModel: record.embedModelName ?? '',
+    embedStoreId: record.embedStoreId,
+    embedModelId: record.embedModelId,
+    docCount: record.docCount ?? 0,
+    totalSize: record.totalSize ?? 0,
+    createdAt: record.createTime ?? '',
+    createdBy: record.username ?? '',
+  };
+}
+
 export default function KnowledgeData() {
   const { message, modal } = App.useApp();
   const { knowledgeId } = useParams();
   const navigate = useNavigate();
-  const knowledge =
-    mockKnowledgeBases.find((item) => item.id === knowledgeId) ?? mockKnowledgeBases[0];
+  const [knowledge, setKnowledge] = useState<KnowledgeBaseItem | null>(null);
 
   const [activeTab, setActiveTab] = useState('documents');
-  const [documents, setDocuments] = useState<KnowledgeDocumentItem[]>(mockKnowledgeDocuments);
-  const [slices] = useState<KnowledgeSliceItem[]>(mockKnowledgeSlices);
+  const [documents, setDocuments] = useState<KnowledgeDocumentItem[]>([]);
+  const [slices, setSlices] = useState<KnowledgeSliceItem[]>([]);
   const [importMode, setImportMode] = useState<ImportMode>('upload');
   const [form] = Form.useForm<{ docName: string; docContent: string }>();
   const [editOpen, setEditOpen] = useState(false);
@@ -79,19 +92,54 @@ export default function KnowledgeData() {
   const [searchedKeyword, setSearchedKeyword] = useState('');
   const [searchHits, setSearchHits] = useState<SearchHit[] | null>(null);
 
-  /**
-   * 概览统计：以知识库自身口径（与知识库列表卡片一致）为基准，
-   * 叠加本次会话内文档的新增 / 删除，保证两处数字始终对得上。
-   */
+  const loadData = useCallback(async () => {
+    if (!knowledgeId) return;
+    try {
+      const [knowledgeResult, docsResult, sliceResult] = await Promise.all([
+        knowledgeApi.list({ pageSize: 100 }),
+        docsApi.list({ knowledgeId }),
+        docsApi.listSlices({ knowledgeId }),
+      ]);
+      const record = knowledgeResult.list.find((item) => item.id === knowledgeId);
+      setKnowledge(record ? toKnowledgeItem(record) : null);
+
+      const docItems = docsResult.list.map((record: DocsRecord) => ({
+        id: record.id,
+        name: record.name,
+        url: record.url ?? '',
+        source:
+          record.sourceType?.toLowerCase() === 'manual' ? ('录入' as const) : ('上传' as const),
+        sliceCount: record.sliceCount ?? 0,
+        sliceStatus: record.sliceStatus === 1 ? ('已训练' as const) : ('未训练' as const),
+        fileSize: record.fileSize ?? 0,
+        content: record.content,
+      }));
+      setDocuments(docItems);
+      setSlices(
+        sliceResult.list.map((record: DocsSliceRecord) => ({
+          id: record.id,
+          docName: docItems.find((doc) => doc.id === record.docId)?.name ?? record.docId,
+          charCount: record.charCount ?? record.content.length,
+          content: record.content,
+          status: record.trainStatus === 1 ? '已训练' : '未训练',
+          createdAt: record.createTime ?? '',
+        })),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '知识库数据加载失败');
+    }
+  }, [knowledgeId, message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
   const totalSize = useMemo(
     () => documents.reduce((sum, item) => sum + item.fileSize, 0),
     [documents],
   );
-  const docCount = Math.max(
-    knowledge.docCount + (documents.length - mockKnowledgeDocuments.length),
-    0,
-  );
-  const dataTotalSize = Math.max(knowledge.totalSize + (totalSize - INITIAL_DOC_SIZE), 0);
+  const docCount = documents.length;
+  const dataTotalSize = totalSize;
 
   const filteredDocuments = useMemo(() => {
     const value = docKeyword.trim().toLowerCase();
@@ -104,23 +152,24 @@ export default function KnowledgeData() {
     [slices, sliceDoc],
   );
 
-  const addDocument = (doc: KnowledgeDocumentItem) => {
-    setDocuments((prev) => [doc, ...prev]);
-    setDocPage(1);
-    setDocKeyword('');
-  };
-
-  const handleUpload = (file: File) => {
-    addDocument({
-      id: `doc-${Date.now()}`,
-      name: file.name,
-      url: `https://docs.smartai.com/knowledge/${file.name}`,
-      source: '上传',
-      sliceCount: 0,
-      sliceStatus: '未训练',
-      fileSize: file.size,
-    });
-    message.success(`「${file.name}」上传成功`);
+  const handleUpload = async (file: File) => {
+    if (!knowledgeId) return false;
+    try {
+      const content = await file.text();
+      await docsApi.create({
+        knowledgeId,
+        name: file.name,
+        sourceType: 'upload',
+        content,
+        fileExt: file.name.split('.').pop(),
+      });
+      message.success(`「${file.name}」上传成功`);
+      setDocPage(1);
+      setDocKeyword('');
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '上传失败');
+    }
     return false;
   };
 
@@ -130,39 +179,52 @@ export default function KnowledgeData() {
       message.warning('请填写文档名称和内容');
       return;
     }
-    const fileSize = new Blob([values.docContent]).size;
-    addDocument({
-      id: `doc-${Date.now()}`,
-      name: values.docName,
-      url: `https://docs.smartai.com/knowledge/${values.docName}`,
-      source: '录入',
-      sliceCount: 0,
-      sliceStatus: '未训练',
-      fileSize,
-    });
-    message.success('文档录入成功');
-    form.resetFields();
+    if (!knowledgeId) return;
+    try {
+      await docsApi.create({
+        knowledgeId,
+        name: values.docName,
+        sourceType: 'manual',
+        content: values.docContent,
+      });
+      message.success('文档录入成功');
+      form.resetFields();
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '文档录入失败');
+    }
   };
 
   const openEdit = (record: KnowledgeDocumentItem) => {
     setEditingDoc(record);
-    editForm.setFieldsValue({ name: record.name, content: '文档内容预览...' });
+    editForm.setFieldsValue({ name: record.name, content: record.content ?? '' });
     setEditOpen(true);
   };
 
-  const runSearch = () => {
+  const runSearch = async () => {
     const value = keyword.trim();
     if (!value) {
       message.warning('请输入搜索关键词');
       return;
     }
-    const hits = slices
-      .map((item) => ({ ...item, score: scoreSlice(item.content, value) }))
-      .filter((item) => item.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5);
-    setSearchedKeyword(value);
-    setSearchHits(hits);
+    if (!knowledgeId) return;
+    try {
+      const hits = await docsApi.searchSlices({ knowledgeId, keyword: value });
+      setSearchedKeyword(value);
+      setSearchHits(
+        hits.map((item) => ({
+          id: item.id,
+          docName: documents.find((doc) => doc.id === item.docId)?.name ?? item.name ?? item.docId,
+          charCount: item.charCount ?? item.content.length,
+          content: item.content,
+          status: item.trainStatus === 1 ? '已训练' : '未训练',
+          createdAt: item.createTime ?? '',
+          score: scoreSlice(item.content, value),
+        })),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '检索失败');
+    }
   };
 
   const resetSearch = () => {
@@ -220,7 +282,15 @@ export default function KnowledgeData() {
                 content: `您确定重新向量化该文档「${record.name}」？此操作将会删除Vector向量库中旧数据。`,
                 okText: '确定',
                 cancelText: '取消',
-                onOk: () => message.success('已开始重新向量化'),
+                onOk: async () => {
+                  try {
+                    await docsApi.train(record.id);
+                    message.success('已开始重新向量化');
+                    await loadData();
+                  } catch (error) {
+                    message.error(error instanceof Error ? error.message : '向量化失败');
+                  }
+                },
               });
             }}
           >
@@ -241,9 +311,14 @@ export default function KnowledgeData() {
                 okText: '删除',
                 okButtonProps: { danger: true },
                 cancelText: '取消',
-                onOk: () => {
-                  setDocuments((prev) => prev.filter((item) => item.id !== record.id));
-                  message.success('删除成功');
+                onOk: async () => {
+                  try {
+                    await docsApi.delete(record.id);
+                    message.success('删除成功');
+                    await loadData();
+                  } catch (error) {
+                    message.error(error instanceof Error ? error.message : '删除失败');
+                  }
                 },
               });
             }}
@@ -275,15 +350,9 @@ export default function KnowledgeData() {
     { title: '创建时间', dataIndex: 'createdAt', width: 160 },
   ];
 
-  const documentToolbar = useTableToolbar<KnowledgeDocumentItem>(documentColumns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
+  const documentToolbar = useTableToolbar<KnowledgeDocumentItem>(documentColumns, loadData);
 
-  const sliceToolbar = useTableToolbar<KnowledgeSliceItem>(sliceColumns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带筛选条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
+  const sliceToolbar = useTableToolbar<KnowledgeSliceItem>(sliceColumns, loadData);
 
   /** 导入文档 / 手动录入文档两种入库方式，选中卡片高亮 */
   const importContent = (
@@ -520,10 +589,10 @@ export default function KnowledgeData() {
             📚
           </div>
           <Title level={5} className="mt-3 mb-2! text-center">
-            {knowledge.name}
+            {knowledge?.name ?? ''}
           </Title>
           <Paragraph className="mb-0! text-13px text-center" ellipsis={{ rows: 3 }}>
-            {knowledge.description}
+            {knowledge?.description}
           </Paragraph>
         </div>
         <div className="px-5 pb-5 flex flex-col gap-4 mt-4">
@@ -541,19 +610,19 @@ export default function KnowledgeData() {
           </div>
           <div>
             <div className="text-12px text-[var(--ant-color-text-secondary)] mb-1">知识库ID</div>
-            <Input value={knowledge.id} readOnly />
+            <Input value={knowledge?.id ?? ''} readOnly />
           </div>
           <div>
             <div className="text-12px text-[var(--ant-color-text-secondary)] mb-1">
               关联向量数据库
             </div>
-            <Tag color="blue">{knowledge.vectorDb}</Tag>
+            <Tag color="blue">{knowledge?.vectorDb}</Tag>
           </div>
           <div>
             <div className="text-12px text-[var(--ant-color-text-secondary)] mb-1">
               关联向量化模型
             </div>
-            <Tag color="green">{knowledge.embeddingModel}</Tag>
+            <Tag color="green">{knowledge?.embeddingModel}</Tag>
           </div>
         </div>
       </div>
@@ -593,14 +662,20 @@ export default function KnowledgeData() {
         }}
         onOk={async () => {
           const values = await editForm.validateFields();
-          setDocuments((prev) =>
-            prev.map((item) =>
-              item.id === editingDoc?.id ? { ...item, name: values.name } : item,
-            ),
-          );
-          setEditOpen(false);
-          setEditingDoc(null);
-          message.success('编辑成功');
+          if (!editingDoc) return;
+          try {
+            await docsApi.update({
+              id: editingDoc.id,
+              name: values.name,
+              content: values.content || undefined,
+            });
+            setEditOpen(false);
+            setEditingDoc(null);
+            message.success('编辑成功');
+            await loadData();
+          } catch (error) {
+            message.error(error instanceof Error ? error.message : '编辑失败');
+          }
         }}
       >
         <Form form={editForm} layout="vertical">

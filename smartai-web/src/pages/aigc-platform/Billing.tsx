@@ -6,7 +6,9 @@ import { GridComponent, LegendComponent, TooltipComponent } from 'echarts/compon
 import * as echarts from 'echarts/core';
 import { CanvasRenderer } from 'echarts/renderers';
 import ReactEChartsCore from 'echarts-for-react/lib/core';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { BillingStatRecord } from '@/api/aigc';
+import { billingApi, modelApi } from '@/api/aigc';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
@@ -17,7 +19,7 @@ import { useTableToolbar } from '@/hooks/useTableToolbar';
 echarts.use([LineChart, GridComponent, LegendComponent, TooltipComponent, CanvasRenderer]);
 
 interface BillingRecord {
-  id: number;
+  id: string;
   username: string;
   modelName: string;
   tokens: number;
@@ -33,52 +35,22 @@ interface DailyStat {
   requests: number;
 }
 
-function pad(value: number): string {
-  return String(value).padStart(2, '0');
-}
-
-function formatTime(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-}
-
 function formatNumber(value: number): string {
   if (value >= 1000000) return `${(value / 1000000).toFixed(2)}M`;
   return value.toLocaleString();
 }
 
-const modelCycle = ['gpt-4o', 'gpt-4o-mini', 'deepseek-v3', 'qwen-max', 'glm-4-plus'];
-
-function createBillingRecords(): BillingRecord[] {
-  return Array.from({ length: 53 }, (_, index) => {
-    const promptTokens = 100 + Math.floor(Math.random() * 2000);
-    const completionTokens = 200 + Math.floor(Math.random() * 3000);
-    return {
-      id: index + 1,
-      username: `user${(index % 12) + 1}@example.com`,
-      modelName: modelCycle[index % modelCycle.length],
-      tokens: promptTokens + completionTokens,
-      promptTokens,
-      completionTokens,
-      ip: `192.168.${(index % 4) + 1}.${20 + (index % 60)}`,
-      callTime: formatTime(new Date(Date.now() - index * 6 * 3600000)),
-    };
-  });
-}
-
-/** 近 30 日趋势：用固定波形生成，刷新页面数值保持稳定 */
-function createDailyStats(): DailyStat[] {
-  const today = new Date();
-  return Array.from({ length: 30 }, (_, index) => {
-    const date = new Date(today);
-    date.setDate(today.getDate() - (29 - index));
-    const wave = Math.sin(index / 3) * 0.22 + 1;
-    const requests = Math.round(1200 * wave + (index % 5) * 40);
-    return {
-      date: `${pad(date.getMonth() + 1)}-${pad(date.getDate())}`,
-      requests,
-      tokens: requests * (620 + (index % 7) * 30),
-    };
-  });
+function toBillingRecord(record: BillingStatRecord): BillingRecord {
+  return {
+    id: `${record.userId ?? record.username ?? ''}-${record.model ?? ''}`,
+    username: record.username ?? '',
+    modelName: record.model ?? '',
+    tokens: Number(record.totalTokens ?? 0),
+    promptTokens: Number(record.promptTokens ?? 0),
+    completionTokens: Number(record.completionTokens ?? 0),
+    ip: record.ip ?? '',
+    callTime: record.lastCallTime ?? '',
+  };
 }
 
 function buildTrendOption(stats: DailyStat[], isDark: boolean) {
@@ -162,30 +134,64 @@ function buildTrendOption(stats: DailyStat[], isDark: boolean) {
 export default function Billing() {
   const { message } = App.useApp();
   const { isDark } = useThemeMode();
-  const [records, setRecords] = useState<BillingRecord[]>(createBillingRecords);
-  const [stats, setStats] = useState<DailyStat[]>(createDailyStats);
+  const [records, setRecords] = useState<BillingRecord[]>([]);
+  const [stats, setStats] = useState<DailyStat[]>([]);
+  const [summary, setSummary] = useState({ totalTokens: 0, totalRequests: 0, avgToken: 0 });
+  const [total, setTotal] = useState(0);
+  const [modelOptions, setModelOptions] = useState<{ value: string; label: string }[]>([]);
   const [query, setQuery] = useState<QueryParams>({});
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
 
-  const filteredRecords = useMemo(() => {
-    const keyword = typeof query.username === 'string' ? query.username.toLowerCase() : '';
-    return records.filter((item) => {
-      if (keyword && !item.username.toLowerCase().includes(keyword)) return false;
-      if (typeof query.model === 'string' && item.modelName !== query.model) return false;
-      return true;
-    });
-  }, [records, query]);
+  useEffect(() => {
+    modelApi
+      .list({ pageSize: 100 })
+      .then((result) =>
+        setModelOptions(
+          Array.from(new Set(result.list.map((item) => item.model))).map((value) => ({
+            value,
+            label: value,
+          })),
+        ),
+      )
+      .catch(() => undefined);
+  }, []);
 
-  const summary = useMemo(() => {
-    const totalTokens = stats.reduce((sum, item) => sum + item.tokens, 0);
-    const totalRequests = stats.reduce((sum, item) => sum + item.requests, 0);
-    return {
-      totalTokens,
-      totalRequests,
-      avgToken: totalRequests ? Math.round(totalTokens / totalRequests) : 0,
+  const loadData = useCallback(async () => {
+    const params = {
+      username: typeof query.username === 'string' ? query.username : undefined,
+      model: typeof query.model === 'string' ? query.model : undefined,
     };
-  }, [stats]);
+    try {
+      const [listResult, summaryResult, trendResult] = await Promise.all([
+        billingApi.list({ ...params, page, pageSize }),
+        billingApi.summary(params),
+        billingApi.trend(params),
+      ]);
+      setRecords(listResult.list.map(toBillingRecord));
+      setTotal(listResult.total);
+      const totalTokens = Number(summaryResult.totalTokens ?? 0);
+      const totalRequests = Number(summaryResult.callCount ?? 0);
+      setSummary({
+        totalTokens,
+        totalRequests,
+        avgToken: totalRequests ? Math.round(totalTokens / totalRequests) : 0,
+      });
+      setStats(
+        trendResult.map((item) => ({
+          date: (item.statDate ?? '').slice(5),
+          tokens: Number(item.totalTokens ?? 0),
+          requests: Number(item.callCount ?? 0),
+        })),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '账单数据加载失败');
+    }
+  }, [message, query, page, pageSize]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const cards = [
     {
@@ -211,7 +217,7 @@ export default function Billing() {
     },
     {
       title: '账单记录',
-      value: filteredRecords.length,
+      value: total,
       suffix: '条',
       icon: <ProfileOutlined />,
       color: chartColors[4],
@@ -262,7 +268,7 @@ export default function Billing() {
       key: 'action',
       width: 100,
       fixed: 'right',
-      render: (_, record) => (
+      render: () => (
         <Popconfirm
           title="确认删除"
           description="确定要删除该账单记录吗？"
@@ -270,8 +276,7 @@ export default function Billing() {
           cancelText="取消"
           okButtonProps={{ danger: true }}
           onConfirm={() => {
-            setRecords((prev) => prev.filter((item) => item.id !== record.id));
-            message.success('删除成功');
+            message.warning('账单记录为调用统计聚合数据，不支持删除');
           }}
         >
           <Button type="link" size="small" danger>
@@ -282,14 +287,7 @@ export default function Billing() {
     },
   ];
 
-  const toolbar = useTableToolbar<BillingRecord>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新会重新生成账单与趋势数据
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setRecords(createBillingRecords());
-    setStats(createDailyStats());
-    setPageState(1);
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<BillingRecord>(columns, loadData);
 
   return (
     <PageContainer title="账单统计" contentBordered={false}>
@@ -343,7 +341,7 @@ export default function Billing() {
             label: '模型',
             type: 'select',
             width: 160,
-            options: modelCycle.map((item) => ({ value: item, label: item })),
+            options: modelOptions,
           },
         ]}
         onSearch={handleSearch}
@@ -354,12 +352,12 @@ export default function Billing() {
           rowKey="id"
           bordered
           state={toolbar}
-          dataSource={filteredRecords}
+          dataSource={records}
           scroll={{ x: 1200 }}
           pagination={{
             current: page,
             pageSize,
-            total: filteredRecords.length,
+            total,
             onChange: (nextPage, nextPageSize) => {
               setPageState(nextPage);
               setPageSizeState(nextPageSize);

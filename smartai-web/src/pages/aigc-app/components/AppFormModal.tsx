@@ -1,22 +1,22 @@
 import { CloudUploadOutlined } from '@ant-design/icons';
 import { Form, Input, Modal, Select, Upload } from 'antd';
 import { useEffect } from 'react';
-import { modelOptions } from '../mockData';
-import type { AIApp } from '../types';
+import type { AIApp, ModelOption } from '../types';
 
 export interface AppFormValues {
   name: string;
   model: string;
   logo: string;
   description: string;
-  cover?: unknown;
+  cover?: Array<{ originFileObj?: File }>;
 }
 
 export interface AppFormModalProps {
   open: boolean;
   app?: AIApp | null;
+  modelOptions: ModelOption[];
   onCancel: () => void;
-  onSubmit: (values: AppFormValues) => void;
+  onSubmit: (values: AppFormValues) => void | Promise<void>;
 }
 
 const logoOptions = [
@@ -32,7 +32,13 @@ const logoOptions = [
   { value: '🛠️', label: '🛠️ 工具' },
 ];
 
-export default function AppFormModal({ open, app, onCancel, onSubmit }: AppFormModalProps) {
+export default function AppFormModal({
+  open,
+  app,
+  modelOptions,
+  onCancel,
+  onSubmit,
+}: AppFormModalProps) {
   const [form] = Form.useForm<AppFormValues>();
 
   useEffect(() => {
@@ -51,7 +57,7 @@ export default function AppFormModal({ open, app, onCancel, onSubmit }: AppFormM
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    onSubmit(values);
+    await onSubmit(values);
   };
 
   return (

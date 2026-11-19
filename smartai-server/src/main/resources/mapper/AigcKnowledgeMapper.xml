@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AigcKnowledgeMapper">
+
+    <resultMap id="knowledgeMap" type="com.smartai.entity.AigcKnowledge">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="embed_store_id" property="embedStoreId"/>
+        <result column="embed_model_id" property="embedModelId"/>
+        <result column="name" property="name"/>
+        <result column="description" property="description"/>
+        <result column="cover" property="cover"/>
+        <result column="create_time" property="createTime"/>
+        <result column="username" property="username"/>
+        <result column="embed_store_name" property="embedStoreName"/>
+        <result column="embed_model_name" property="embedModelName"/>
+        <result column="doc_count" property="docCount"/>
+        <result column="total_size" property="totalSize"/>
+    </resultMap>
+
+    <sql id="selectWithRelations">
+        SELECT k.id, k.user_id, k.embed_store_id, k.embed_model_id, k.name, k.description, k.cover, k.create_time,
+               u.username,
+               s.name AS embed_store_name,
+               m.name AS embed_model_name,
+               (SELECT COUNT(*) FROM aigc_docs d WHERE d.knowledge_id = k.id) AS doc_count,
+               (SELECT COALESCE(SUM(d.file_size), 0) FROM aigc_docs d WHERE d.knowledge_id = k.id) AS total_size
+        FROM aigc_knowledge k
+        LEFT JOIN sys_user u ON k.user_id = u.id
+        LEFT JOIN aigc_embed_store s ON k.embed_store_id = s.id
+        LEFT JOIN aigc_model m ON k.embed_model_id = m.id
+    </sql>
+
+    <select id="selectById" resultMap="knowledgeMap">
+        <include refid="selectWithRelations"/>
+        WHERE k.id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="knowledgeMap">
+        <include refid="selectWithRelations"/>
+        <where>
+            <if test="name != null and name != ''">
+                AND k.name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="userId != null and userId != ''">
+                AND k.user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY k.create_time DESC
+    </select>
+
+    <select id="countByEmbedStoreId" resultType="int">
+        SELECT COUNT(*) FROM aigc_knowledge WHERE embed_store_id = #{embedStoreId}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO aigc_knowledge (id, user_id, embed_store_id, embed_model_id, name, description, cover, create_time)
+        VALUES (#{id}, #{userId}, #{embedStoreId}, #{embedModelId}, #{name}, #{description}, #{cover}, #{createTime})
+    </insert>
+
+    <update id="updateById">
+        UPDATE aigc_knowledge
+        <set>
+            id = #{id},
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="embedStoreId != null">embed_store_id = #{embedStoreId},</if>
+            <if test="embedModelId != null">embed_model_id = #{embedModelId},</if>
+            <if test="name != null">name = #{name},</if>
+            <if test="description != null">description = #{description},</if>
+            <if test="cover != null">cover = #{cover},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM aigc_knowledge WHERE id = #{id}
+    </delete>
+</mapper>

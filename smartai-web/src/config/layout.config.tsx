@@ -1,6 +1,16 @@
-import { fetchMenus } from '@/api/menu';
+import { fetchMenuAccess, filterMenusByAccess } from '@/api/menu';
 import type { AppUserInfo, LayoutConfig } from '@/framework';
 import { menus } from './menu.config';
+
+/** 后端按当前用户返回授权菜单，前端据此裁剪静态菜单，保持现有 UI 结构不变 */
+async function loadAuthorizedMenus() {
+  try {
+    const access = await fetchMenuAccess();
+    return filterMenusByAccess(menus, access);
+  } catch {
+    return menus;
+  }
+}
 
 /** 演示用当前用户信息（接入真实登录后由 AuthLayout 覆盖为登录态数据） */
 const currentUser: AppUserInfo = {
@@ -25,10 +35,10 @@ export const layoutConfig: LayoutConfig = {
   /** 菜单模式：'vertical' 侧边栏 / 'horizontal' 顶部 / 'blend' 顶部+侧边栏（可在设置抽屉中切换） */
   menuMode: 'blend',
   /**
-   * 菜单数据源：默认使用本地静态菜单；设置 VITE_MENU_API 后改为接口获取
-   * （dev 设为 mock 即走 build/mock，见 src/api/menu.ts）
+   * 菜单数据源：登录后按后端 /api/sys/menu/current 的授权结果裁剪本地菜单，
+   * 保证菜单展示与接口权限一致，同时维持现有菜单结构与页面映射。
    */
-  menu: import.meta.env.VITE_MENU_API ? fetchMenus : menus,
+  menu: loadAuthorizedMenus,
   /** 默认主题：'light' | 'dark'（用户切换后以本地存储优先） */
   defaultThemeMode: 'light',
   /** 默认主题色（可在设置抽屉中切换，切换后以本地存储优先） */

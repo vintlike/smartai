@@ -1,10 +1,11 @@
 import { EditOutlined, PlusOutlined } from '@ant-design/icons';
 import { Alert, App, Button, Drawer, Form, Input, Popconfirm, Select } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import type { ModelProviderRecord, ModelRecord } from '@/api/aigc';
+import { modelApi, modelProviderApi } from '@/api/aigc';
 import { DataTable } from '@/components/DataTable';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockImageModels } from '../mockData';
 import type { ImageModelItem } from '../types';
 import SupplierFormModal, { type SupplierFormValues } from './SupplierFormModal';
 
@@ -43,25 +44,67 @@ interface ImageFormValues {
   imageStyle: string;
 }
 
-const initialSuppliers: SupplierFormValues[] = [
-  { name: 'OpenAI DALL-E', code: 'openai-dall-e', remark: 'OpenAI 文生图模型' },
-  { name: 'Azure DALL-E', code: 'azure-dall-e', remark: 'Azure 文生图模型' },
-];
+interface SupplierItem extends SupplierFormValues {
+  id: string;
+  remark?: string;
+}
+
+function toViewModel(record: ModelRecord, suppliers: ModelProviderRecord[]): ImageModelItem {
+  return {
+    id: record.id,
+    name: suppliers.find((item) => item.code === record.provider)?.name ?? record.provider ?? '',
+    alias: record.name,
+    version: record.model,
+    apiKey: record.apiKey ?? '',
+    endpoint: record.baseUrl ?? record.endpoint ?? '',
+    deploymentName: record.azureDeploymentName ?? '',
+    imageSize: record.imageSize,
+    imageQuality: record.imageQuality,
+    imageStyle: record.imageStyle,
+  };
+}
 
 export default function ImageModelTab() {
   const { message } = App.useApp();
-  const [models, setModels] = useState<ImageModelItem[]>(mockImageModels);
-  const [suppliers, setSuppliers] = useState<SupplierFormValues[]>(initialSuppliers);
-  const [activeSupplier, setActiveSupplier] = useState(initialSuppliers[0].name);
+  const [models, setModels] = useState<ModelRecord[]>([]);
+  const [suppliers, setSuppliers] = useState<ModelProviderRecord[]>([]);
+  const [activeSupplier, setActiveSupplier] = useState('');
 
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [editing, setEditing] = useState<ImageModelItem | null>(null);
   const [form] = Form.useForm<ImageFormValues>();
 
   const [supplierOpen, setSupplierOpen] = useState(false);
-  const [editingSupplier, setEditingSupplier] = useState<SupplierFormValues | null>(null);
+  const [editingSupplier, setEditingSupplier] = useState<SupplierItem | null>(null);
 
-  const currentModels = models.filter((item) => item.name === activeSupplier);
+  const loadData = useCallback(async () => {
+    try {
+      const [providerResult, modelResult] = await Promise.all([
+        modelProviderApi.list({ pageSize: 100 }),
+        modelApi.list({ type: 'image', pageSize: 100 }),
+      ]);
+      setSuppliers(providerResult.list);
+      setModels(modelResult.list);
+      setActiveSupplier((prev) => {
+        if (prev && providerResult.list.some((item) => item.name === prev)) return prev;
+        return providerResult.list[0]?.name ?? '';
+      });
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '模型列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const currentModels = models
+    .filter((item) => {
+      const providerName =
+        suppliers.find((provider) => provider.code === item.provider)?.name ?? item.provider;
+      return providerName === activeSupplier;
+    })
+    .map((item) => toViewModel(item, suppliers));
 
   const openCreate = () => {
     setEditing(null);
@@ -93,49 +136,54 @@ export default function ImageModelTab() {
 
   const handleSubmit = async () => {
     const values = await form.validateFields();
+    const provider = suppliers.find((item) => item.name === values.name)?.code;
     const payload = {
-      name: values.name,
-      version: values.version[0],
+      type: 'image',
+      provider: provider ?? values.name,
+      model: values.version[0],
+      name: values.alias,
+      baseUrl: values.baseUrl,
       endpoint: values.baseUrl,
-      alias: values.alias,
       apiKey: values.apiKey,
-      deploymentName: values.alias,
+      azureDeploymentName: values.alias,
       imageSize: values.imageSize,
       imageQuality: values.imageQuality,
       imageStyle: values.imageStyle,
+      status: 1,
+      showStatus: 1,
     };
-    if (editing) {
-      setModels((prev) =>
-        prev.map((item) => (item.id === editing.id ? { ...item, ...payload } : item)),
-      );
-      message.success('编辑模型成功');
-    } else {
-      setModels((prev) => [{ id: `im-${Date.now()}`, ...payload }, ...prev]);
-      message.success('新增模型成功');
+    try {
+      if (editing) {
+        await modelApi.update({ ...payload, id: editing.id });
+        message.success('编辑模型成功');
+      } else {
+        await modelApi.create(payload);
+        message.success('新增模型成功');
+      }
+      setDrawerOpen(false);
+      setEditing(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存模型失败');
     }
-    setDrawerOpen(false);
-    setEditing(null);
   };
 
-  const handleSupplierSubmit = (values: SupplierFormValues) => {
-    if (editingSupplier) {
-      setSuppliers((prev) =>
-        prev.map((item) => (item.name === editingSupplier.name ? { ...item, ...values } : item)),
-      );
-      setModels((prev) =>
-        prev.map((item) =>
-          item.name === editingSupplier.name ? { ...item, name: values.name } : item,
-        ),
-      );
-      if (activeSupplier === editingSupplier.name) setActiveSupplier(values.name);
-      message.success('编辑模型供应商成功');
-    } else {
-      setSuppliers((prev) => [...prev, values]);
-      setActiveSupplier(values.name);
-      message.success('新增模型供应商成功');
+  const handleSupplierSubmit = async (values: SupplierFormValues) => {
+    try {
+      if (editingSupplier) {
+        await modelProviderApi.update({ ...values, id: editingSupplier.id });
+        message.success('编辑模型供应商成功');
+      } else {
+        await modelProviderApi.create(values);
+        setActiveSupplier(values.name);
+        message.success('新增模型供应商成功');
+      }
+      setSupplierOpen(false);
+      setEditingSupplier(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存供应商失败');
     }
-    setSupplierOpen(false);
-    setEditingSupplier(null);
   };
 
   const columns: ColumnsType<ImageModelItem> = [
@@ -163,9 +211,14 @@ export default function ImageModelTab() {
             title="确定删除该版本？"
             okText="确定"
             cancelText="取消"
-            onConfirm={() => {
-              setModels((prev) => prev.filter((item) => item.id !== record.id));
-              message.success('删除成功');
+            onConfirm={async () => {
+              try {
+                await modelApi.delete(record.id);
+                message.success('删除成功');
+                await loadData();
+              } catch (error) {
+                message.error(error instanceof Error ? error.message : '删除失败');
+              }
             }}
           >
             <Button type="link" size="small" danger>
@@ -177,10 +230,7 @@ export default function ImageModelTab() {
     },
   ];
 
-  const toolbar = useTableToolbar<ImageModelItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为按供应商查询
-    await new Promise((resolve) => setTimeout(resolve, 300));
-  });
+  const toolbar = useTableToolbar<ImageModelItem>(columns, loadData);
 
   return (
     <div>
@@ -208,7 +258,12 @@ export default function ImageModelTab() {
           </div>
           <div className="flex flex-col gap-1">
             {suppliers.map((item) => {
-              const count = models.filter((model) => model.name === item.name).length;
+              const count = models.filter((model) => {
+                const providerName =
+                  suppliers.find((provider) => provider.code === model.provider)?.name ??
+                  model.provider;
+                return providerName === item.name;
+              }).length;
               const active = item.name === activeSupplier;
               return (
                 <div

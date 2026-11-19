@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.SysRoleMapper">
+
+    <resultMap id="roleMap" type="com.smartai.entity.SysRole">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="description" property="description"/>
+    </resultMap>
+
+    <sql id="columns">id, name, code, description</sql>
+
+    <select id="selectById" resultMap="roleMap">
+        SELECT <include refid="columns"/> FROM sys_role WHERE id = #{id}
+    </select>
+
+    <select id="selectList" resultMap="roleMap">
+        SELECT <include refid="columns"/> FROM sys_role
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="code != null and code != ''">
+                AND code LIKE CONCAT('%', #{code}, '%')
+            </if>
+        </where>
+        ORDER BY code
+    </select>
+
+    <select id="selectByUserId" resultMap="roleMap">
+        SELECT r.id, r.name, r.code, r.description
+        FROM sys_role r
+        INNER JOIN sys_user_role ur ON ur.role_id = r.id
+        WHERE ur.user_id = #{userId}
+        ORDER BY r.code
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sys_role (<include refid="columns"/>)
+        VALUES (#{id}, #{name}, #{code}, #{description})
+    </insert>
+
+    <update id="updateById">
+        UPDATE sys_role
+        <set>
+            id = #{id},
+            <if test="name != null">name = #{name},</if>
+            <if test="code != null">code = #{code},</if>
+            <if test="description != null">description = #{description},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_role WHERE id = #{id}
+    </delete>
+</mapper>

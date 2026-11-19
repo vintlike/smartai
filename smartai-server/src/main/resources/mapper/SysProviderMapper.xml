@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.SysProviderMapper">
+
+    <resultMap id="providerMap" type="com.smartai.entity.SysProvider">
+        <id column="id" property="id"/>
+        <result column="name" property="name"/>
+        <result column="code" property="code"/>
+        <result column="remark" property="remark"/>
+        <result column="create_time" property="createTime"/>
+        <result column="update_time" property="updateTime"/>
+    </resultMap>
+
+    <sql id="columns">id, name, code, remark, create_time, update_time</sql>
+
+    <select id="selectById" resultMap="providerMap">
+        SELECT <include refid="columns"/> FROM sys_provider WHERE id = #{id}
+    </select>
+
+    <select id="selectByCode" resultMap="providerMap">
+        SELECT <include refid="columns"/> FROM sys_provider WHERE code = #{code}
+    </select>
+
+    <select id="selectList" resultMap="providerMap">
+        SELECT <include refid="columns"/> FROM sys_provider
+        <where>
+            <if test="name != null and name != ''">
+                AND name LIKE CONCAT('%', #{name}, '%')
+            </if>
+            <if test="code != null and code != ''">
+                AND code LIKE CONCAT('%', #{code}, '%')
+            </if>
+        </where>
+        ORDER BY create_time DESC, id
+    </select>
+
+    <select id="countByProvider" resultType="int">
+        SELECT COUNT(*) FROM aigc_model WHERE provider = #{code}
+    </select>
+
+    <insert id="insert">
+        INSERT INTO sys_provider (<include refid="columns"/>)
+        VALUES (#{id}, #{name}, #{code}, #{remark}, #{createTime}, #{updateTime})
+    </insert>
+
+    <update id="updateById">
+        UPDATE sys_provider
+        <set>
+            id = #{id},
+            <if test="name != null">name = #{name},</if>
+            <if test="code != null">code = #{code},</if>
+            <if test="remark != null">remark = #{remark},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+            <if test="updateTime != null">update_time = #{updateTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateProviderCode">
+        UPDATE aigc_model SET provider = #{newCode} WHERE provider = #{oldCode}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sys_provider WHERE id = #{id}
+    </delete>
+</mapper>

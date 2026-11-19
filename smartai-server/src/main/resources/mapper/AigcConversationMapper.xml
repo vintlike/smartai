@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.smartai.mapper.AigcConversationMapper">
+
+    <resultMap id="conversationMap" type="com.smartai.entity.AigcConversation">
+        <id column="id" property="id"/>
+        <result column="user_id" property="userId"/>
+        <result column="title" property="title"/>
+        <result column="create_time" property="createTime"/>
+        <result column="username" property="username"/>
+        <result column="message_count" property="messageCount"/>
+        <result column="token_used" property="tokenUsed"/>
+        <result column="last_conversation_time" property="lastConversationTime"/>
+    </resultMap>
+
+    <select id="selectById" resultMap="conversationMap">
+        SELECT id, user_id, title, create_time FROM aigc_conversation WHERE id = #{id}
+    </select>
+
+    <select id="selectByUserId" resultMap="conversationMap">
+        SELECT c.id, c.user_id, c.title, c.create_time,
+               (SELECT COUNT(*) FROM aigc_message m WHERE m.conversation_id = c.id) AS message_count
+        FROM aigc_conversation c
+        WHERE c.user_id = #{userId}
+        ORDER BY c.create_time DESC
+    </select>
+
+    <sql id="pageWithStats">
+        SELECT c.id, c.user_id, c.title, c.create_time,
+               COALESCE(u.username, m.username, c.user_id) AS username,
+               COALESCE(m.message_count, 0) AS message_count,
+               COALESCE(m.token_used, 0) AS token_used,
+               m.last_conversation_time
+        FROM aigc_conversation c
+        LEFT JOIN sys_user u ON c.user_id = u.id
+        LEFT JOIN (
+            SELECT conversation_id,
+                   MAX(username) AS username,
+                   COUNT(*) AS message_count,
+                   COALESCE(SUM(total_tokens), 0) AS token_used,
+                   MAX(create_time) AS last_conversation_time
+            FROM aigc_message
+            GROUP BY conversation_id
+        ) m ON m.conversation_id = c.id
+    </sql>
+
+    <sql id="pageCondition">
+        <where>
+            <if test="userId != null and userId != ''">
+                AND c.user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (
+                    c.title LIKE CONCAT('%', #{keyword}, '%')
+                    OR c.user_id LIKE CONCAT('%', #{keyword}, '%')
+                    OR u.username LIKE CONCAT('%', #{keyword}, '%')
+                    OR m.username LIKE CONCAT('%', #{keyword}, '%')
+                )
+            </if>
+        </where>
+    </sql>
+
+    <select id="selectPage" resultMap="conversationMap">
+        <include refid="pageWithStats"/>
+        <include refid="pageCondition"/>
+        ORDER BY COALESCE(m.last_conversation_time, c.create_time) DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="long">
+        SELECT COUNT(*)
+        FROM aigc_conversation c
+        LEFT JOIN sys_user u ON c.user_id = u.id
+        LEFT JOIN (
+            SELECT conversation_id, MAX(username) AS username
+            FROM aigc_message
+            GROUP BY conversation_id
+        ) m ON m.conversation_id = c.id
+        <include refid="pageCondition"/>
+    </select>
+
+    <insert id="insert">
+        INSERT INTO aigc_conversation (id, user_id, title, create_time)
+        VALUES (#{id}, #{userId}, #{title}, #{createTime})
+    </insert>
+
+    <update id="updateById">
+        UPDATE aigc_conversation
+        <set>
+            id = #{id},
+            <if test="userId != null">user_id = #{userId},</if>
+            <if test="title != null">title = #{title},</if>
+            <if test="createTime != null">create_time = #{createTime},</if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM aigc_conversation WHERE id = #{id}
+    </delete>
+</mapper>

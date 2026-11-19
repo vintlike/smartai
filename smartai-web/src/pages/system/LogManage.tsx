@@ -1,23 +1,52 @@
 import { EyeOutlined } from '@ant-design/icons';
-import { Button, Descriptions, Drawer, Tag, Typography } from 'antd';
+import { App, Button, Descriptions, Drawer, Tag, Typography } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SysLogRecord } from '@/api/system';
+import { logApi } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockLogs } from './mockData';
 import type { LogItem } from './types';
 
 const { Text } = Typography;
 
+function toLogItem(record: SysLogRecord): LogItem {
+  return {
+    id: record.id,
+    username: record.username ?? '',
+    status: record.resultStatus === 2 ? 'fail' : 'success',
+    description: record.operation ?? '',
+    url: record.url ?? '',
+    costTime: Number(record.durationMs ?? 0),
+    method: record.method ?? '',
+    ip: record.ip ?? '',
+    operateTime: record.createTime ?? '',
+  };
+}
+
 export default function LogManage() {
-  const [logs] = useState<LogItem[]>(mockLogs);
+  const { message } = App.useApp();
+  const [logs, setLogs] = useState<LogItem[]>([]);
   const [current, setCurrent] = useState<LogItem | null>(null);
   const [query, setQuery] = useState<QueryParams>({});
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
+
+  const loadData = useCallback(async () => {
+    try {
+      const result = await logApi.list();
+      setLogs(result.list.map(toLogItem));
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '日志列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
 
   const filteredLogs = useMemo(() => {
     const keyword = typeof query.keyword === 'string' ? query.keyword.toLowerCase() : '';
@@ -84,11 +113,7 @@ export default function LogManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<LogItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<LogItem>(columns, loadData);
 
   return (
     <PageContainer title="日志管理" contentBordered={false}>

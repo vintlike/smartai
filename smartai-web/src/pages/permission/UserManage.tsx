@@ -1,13 +1,15 @@
 import { KeyOutlined, PlusOutlined } from '@ant-design/icons';
 import { App, Button, Form, Input, Modal, Select, Switch, Tag, TreeSelect } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { SysRoleRecord, SysUserRecord } from '@/api/system';
+import { deptApi, roleApi, userApi } from '@/api/system';
 import type { QueryParams } from '@/api/types';
 import { DataTable } from '@/components/DataTable';
 import PageContainer from '@/components/PageContainer';
 import SearchBar from '@/components/SearchBar';
 import { useTableToolbar } from '@/hooks/useTableToolbar';
-import { mockDepartments, mockRoles, mockUsers } from './mockData';
+import { buildDeptTree } from './deptUtils';
 import type { DeptItem, UserItem } from './types';
 
 interface UserFormValues {
@@ -30,14 +32,16 @@ interface DeptTreeSelectNode {
 function toDeptTreeSelect(nodes: DeptItem[]): DeptTreeSelectNode[] {
   return nodes.map((node) => ({
     title: node.deptName,
-    value: node.deptName,
+    value: node.id,
     children: node.children ? toDeptTreeSelect(node.children) : undefined,
   }));
 }
 
 export default function UserManage() {
   const { message, modal } = App.useApp();
-  const [users, setUsers] = useState<UserItem[]>(mockUsers);
+  const [users, setUsers] = useState<UserItem[]>([]);
+  const [roles, setRoles] = useState<SysRoleRecord[]>([]);
+  const [deptTree, setDeptTree] = useState<DeptItem[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<UserItem | null>(null);
   const [form] = Form.useForm<UserFormValues>();
@@ -47,13 +51,64 @@ export default function UserManage() {
   const [page, setPageState] = useState(1);
   const [pageSize, setPageSizeState] = useState(10);
 
+  const loadData = useCallback(async () => {
+    try {
+      const [userResult, roleResult, deptResult] = await Promise.all([
+        userApi.list(),
+        roleApi.list(),
+        deptApi.list(),
+      ]);
+      const roleList = roleResult.list;
+      const deptList = deptResult.list;
+      const deptNameMap = new Map(deptList.map((item) => [item.id, item.name]));
+      const roleNameMap = new Map(roleList.map((item) => [item.id, item.name]));
+      const userRoles = await roleApi
+        .listUserRoles(userResult.list.map((item: SysUserRecord) => item.id))
+        .catch(() => []);
+      const roleIdsByUser = new Map<string, string[]>();
+      userRoles.forEach((item) => {
+        roleIdsByUser.set(item.userId, [...(roleIdsByUser.get(item.userId) ?? []), item.roleId]);
+      });
+
+      setRoles(roleList);
+      setDeptTree(buildDeptTree(deptList));
+      setUsers(
+        userResult.list.map((record: SysUserRecord) => {
+          const roleIds = roleIdsByUser.get(record.id) ?? [];
+          return {
+            id: record.id,
+            username: record.username,
+            realName: record.realName ?? '',
+            role: roleIds
+              .map((id) => roleNameMap.get(id) ?? '')
+              .filter(Boolean)
+              .join('、'),
+            roleIds,
+            deptName: record.deptId ? (deptNameMap.get(record.deptId) ?? '') : '',
+            deptId: record.deptId,
+            status: record.isEnabled === false ? 0 : 1,
+            email: record.email ?? '',
+            phone: record.phone ?? '',
+          };
+        }),
+      );
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '用户列表加载失败');
+    }
+  }, [message]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
   const filteredUsers = useMemo(() => {
     const keyword = typeof query.username === 'string' ? query.username.toLowerCase() : '';
     return users.filter((item) => {
       if (keyword && !`${item.username}${item.realName}`.toLowerCase().includes(keyword)) {
         return false;
       }
-      if (typeof query.role === 'string' && item.role !== query.role) return false;
+      if (typeof query.role === 'string' && !item.role.split('、').includes(query.role))
+        return false;
       if (typeof query.status === 'string' && String(item.status) !== query.status) return false;
       return true;
     });
@@ -82,8 +137,8 @@ export default function UserManage() {
     form.setFieldsValue({
       username: record.username,
       realName: record.realName,
-      role: record.role,
-      deptName: record.deptName,
+      role: record.roleIds?.[0],
+      deptName: record.deptId,
       status: record.status === 1,
       email: record.email,
       phone: record.phone,
@@ -93,42 +148,34 @@ export default function UserManage() {
 
   const handleOk = async () => {
     const values = await form.validateFields();
-    if (editing) {
-      setUsers((prev) =>
-        prev.map((item) =>
-          item.id === editing.id
-            ? {
-                ...item,
-                username: values.username,
-                realName: values.realName,
-                role: values.role,
-                deptName: values.deptName,
-                status: values.status ? 1 : 0,
-                email: values.email ?? '',
-                phone: values.phone ?? '',
-              }
-            : item,
-        ),
-      );
-      message.success('编辑用户成功');
-    } else {
-      setUsers((prev) => [
-        {
-          id: `user-${Date.now()}`,
-          username: values.username,
-          realName: values.realName,
-          role: values.role,
-          deptName: values.deptName,
-          status: values.status ? 1 : 0,
-          email: values.email ?? '',
-          phone: values.phone ?? '',
-        },
-        ...prev,
-      ]);
-      message.success('新建用户成功');
+    const payload = {
+      username: values.username,
+      realName: values.realName,
+      email: values.email,
+      phone: values.phone,
+      deptId: values.deptName,
+      isEnabled: values.status,
+    };
+    try {
+      let userId: string | undefined;
+      if (editing) {
+        await userApi.update({ ...payload, id: editing.id });
+        userId = editing.id;
+        message.success('编辑用户成功');
+      } else {
+        const created = await userApi.create({ ...payload, password: values.password });
+        userId = created.id;
+        message.success('新建用户成功');
+      }
+      if (userId) {
+        await userApi.assignRoles(userId, values.role ? [values.role] : []);
+      }
+      setModalOpen(false);
+      setEditing(null);
+      await loadData();
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '保存用户失败');
     }
-    setModalOpen(false);
-    setEditing(null);
   };
 
   const openReset = (record: UserItem) => {
@@ -138,14 +185,14 @@ export default function UserManage() {
 
   const submitReset = async () => {
     if (!resetTarget) return;
+    const values = await resetForm.validateFields();
     try {
-      await resetForm.validateFields();
-    } catch {
-      return;
+      await userApi.resetPassword(resetTarget.id, values.password);
+      message.success(`已重置「${resetTarget.realName}」的密码`);
+      setResetTarget(null);
+    } catch (error) {
+      message.error(error instanceof Error ? error.message : '重置密码失败');
     }
-    // mock 环境仅做交互演示，真实项目在此调用重置密码接口
-    message.success(`已重置「${resetTarget.realName}」的密码`);
-    setResetTarget(null);
   };
 
   const columns: ColumnsType<UserItem> = [
@@ -187,9 +234,14 @@ export default function UserManage() {
                 okText: '删除',
                 okButtonProps: { danger: true },
                 cancelText: '取消',
-                onOk: () => {
-                  setUsers((prev) => prev.filter((item) => item.id !== record.id));
-                  message.success('删除成功');
+                onOk: async () => {
+                  try {
+                    await userApi.delete(record.id);
+                    message.success('删除成功');
+                    await loadData();
+                  } catch (error) {
+                    message.error(error instanceof Error ? error.message : '删除失败');
+                  }
                 },
               });
             }}
@@ -201,11 +253,7 @@ export default function UserManage() {
     },
   ];
 
-  const toolbar = useTableToolbar<UserItem>(columns, async () => {
-    // 当前为本地 mock 数据源，刷新先模拟请求时延；接入接口后替换为带查询条件的请求
-    await new Promise((resolve) => setTimeout(resolve, 300));
-    setQuery((prev) => ({ ...prev }));
-  });
+  const toolbar = useTableToolbar<UserItem>(columns, loadData);
 
   return (
     <PageContainer
@@ -223,7 +271,7 @@ export default function UserManage() {
             name: 'role',
             label: '角色',
             type: 'select',
-            options: mockRoles.map((item) => ({ value: item.roleName, label: item.roleName })),
+            options: roles.map((item) => ({ value: item.name, label: item.name })),
           },
           {
             name: 'status',
@@ -296,7 +344,7 @@ export default function UserManage() {
           <Form.Item name="role" label="角色" rules={[{ required: true, message: '请选择角色' }]}>
             <Select
               placeholder="请选择角色"
-              options={mockRoles.map((item) => ({ value: item.roleName, label: item.roleName }))}
+              options={roles.map((item) => ({ value: item.id, label: item.name }))}
             />
           </Form.Item>
           <Form.Item
@@ -306,7 +354,7 @@ export default function UserManage() {
           >
             <TreeSelect
               placeholder="请选择部门"
-              treeData={toDeptTreeSelect(mockDepartments)}
+              treeData={toDeptTreeSelect(deptTree)}
               treeDefaultExpandAll
               allowClear
             />
